@@ -1,0 +1,178 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Neutrals (light) */
+    --background: 162 76% 97%; /* #F0FDF9 mint */
+    --foreground: 222 47% 11%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 11%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 11%;
+
+    /* Brand: teal -> green (Sanad identity) */
+    --brand-blue: 161 94% 30%; /* #059669 emerald — gradient end */
+    --brand-teal: 173 66% 50%; /* #2DD4BF teal — gradient start */
+    --brand-accent-blue: 226 63% 53%; /* #3B5BDB — auth/CTA button accent */
+    --brand-gold: 38 92% 50%;
+    --brand-angle: 135deg;
+
+    --sidebar-grad-1: 141 76% 78%; /* #86EFAC */
+    --sidebar-grad-2: 141 70% 63%; /* #4ADE80 */
+    --sidebar-grad-3: 173 66% 50%; /* #2DD4BF */
+    --sidebar-dark: 221 39% 11%; /* #111827 */
+
+    --primary: 161 94% 30%;
+    --primary-foreground: 210 40% 98%;
+
+    --secondary: 173 66% 50%;
+    --secondary-foreground: 0 0% 100%;
+
+    --accent: 162 60% 94%;
+    --accent-foreground: 161 70% 22%;
+
+    --muted: 210 40% 96%;
+    --muted-foreground: 215 16% 47%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 214 32% 91%;
+    --input: 214 32% 91%;
+    --ring: 161 94% 30%;
+
+    --radius: 1rem;
+  }
+
+  .dark {
+    --background: 222 49% 8%; /* #0B1120 */
+    --foreground: 213 31% 91%;
+
+    --card: 217 33% 17%; /* #1E293B */
+    --card-foreground: 213 31% 91%;
+
+    --popover: 217 33% 17%;
+    --popover-foreground: 213 31% 91%;
+
+    --brand-blue: 161 94% 30%;
+    --brand-teal: 173 66% 50%;
+    --brand-accent-blue: 226 63% 53%;
+    --brand-gold: 41 96% 56%;
+
+    --sidebar-dark: 221 39% 11%; /* #111827 */
+
+    --primary: 173 66% 50%;
+    --primary-foreground: 222 47% 11%;
+
+    --secondary: 161 94% 30%;
+    --secondary-foreground: 210 40% 98%;
+
+    --accent: 217 40% 18%;
+    --accent-foreground: 210 40% 96%;
+
+    --muted: 217 33% 16%;
+    --muted-foreground: 215 20% 65%;
+
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 217 33% 18%;
+    --input: 217 33% 20%;
+    --ring: 173 66% 50%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+
+  /* Arabic typography: slightly larger line-height + dedicated font when RTL */
+  [dir="rtl"] {
+    font-family: var(--font-arabic), var(--font-latin), system-ui, sans-serif;
+  }
+  [dir="rtl"] body,
+  [dir="rtl"] p,
+  [dir="rtl"] li {
+    line-height: 1.85;
+    letter-spacing: 0;
+  }
+}
+
+@layer utilities {
+  /* Brand text gradient */
+  .text-gradient {
+    @apply bg-brand-gradient bg-clip-text text-transparent;
+  }
+
+  /* Sanad sidebar surface: green gradient in light mode, solid dark navy in dark mode */
+  .sidebar-surface {
+    background: linear-gradient(
+      180deg,
+      hsl(var(--sidebar-grad-1)) 0%,
+      hsl(var(--sidebar-grad-2)) 50%,
+      hsl(var(--sidebar-grad-3)) 100%
+    );
+  }
+  .dark .sidebar-surface {
+    background: hsl(var(--sidebar-dark));
+  }
+
+  /* Admin sidebar: always dark navy, in both light and dark mode (authority feel) */
+  .sidebar-surface-admin {
+    background: hsl(var(--sidebar-dark));
+  }
+
+  /* Mirror an icon when in RTL (e.g. arrows that point "forward") */
+  [dir="rtl"] .rtl-flip {
+    transform: scaleX(-1);
+  }
+
+  .grid-pattern {
+    background-image: radial-gradient(
+      hsl(var(--foreground) / 0.06) 1px,
+      transparent 1px
+    );
+    background-size: 22px 22px;
+  }
+
+  /* Custom scrollbar for a polished feel */
+  .scroll-thin {
+    scrollbar-width: thin;
+    scrollbar-color: hsl(var(--border)) transparent;
+  }
+  .scroll-thin::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  .scroll-thin::-webkit-scrollbar-thumb {
+    background: hsl(var(--border));
+    border-radius: 9999px;
+  }
+
+  /* Reusable hover-lift micro-interaction for interactive surfaces */
+  .hover-lift {
+    @apply transition-all duration-300 ease-out hover:-translate-y-1 hover:shadow-brand;
+  }
+}
+
+/* Respect users who prefer less motion: neutralise CSS animations/transitions
+   globally. (Framer Motion components opt out separately via useReducedMotion.) */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}

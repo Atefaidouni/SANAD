@@ -1,0 +1,68 @@
+import type { Level } from "./types";
+
+/** A representative set of Algerian wilayas (provinces) for forms. */
+export const WILAYAS: string[] = [
+  "Adrar",
+  "Chlef",
+  "Laghouat",
+  "Oum El Bouaghi",
+  "Batna",
+  "Béjaïa",
+  "Biskra",
+  "Béchar",
+  "Blida",
+  "Bouira",
+  "Tamanrasset",
+  "Tébessa",
+  "Tlemcen",
+  "Tiaret",
+  "Tizi Ouzou",
+  "Alger",
+  "Djelfa",
+  "Jijel",
+  "Sétif",
+  "Saïda",
+  "Skikda",
+  "Sidi Bel Abbès",
+  "Annaba",
+  "Guelma",
+  "Constantine",
+  "Médéa",
+  "Mostaganem",
+  "M'Sila",
+  "Mascara",
+  "Ouargla",
+  "Oran",
+  "El Bayadh",
+  "Boumerdès",
+  "El Tarf",
+  "Tindouf",
+  "Tissemsilt",
+  "El Oued",
+  "Khenchela",
+  "Souk Ahras",
+  "Tipaza",
+  "Mila",
+  "Aïn Defla",
+  "Naâma",
+  "Aïn Témouchent",
+  "Ghardaïa",
+  "Relizane",
+];
+
+export const LEVEL_VALUES: Level[] = ["middle", "high", "exam"];
+
+export const SUBJECTS: string[] = [
+  "Mathematics",
+  "Physics",
+  "Natural Sciences",
+  "Arabic Literature",
+  "English",
+  "French",
+  "Philosophy",
+  "History & Geography",
+  "Islamic Studies",
+  "Economics",
+];
+
+export const DELIVERY_TYPES = ["home", "office", "pickup"] as const;
