@@ -1,6 +1,5 @@
 "use client";
 
-import { MarketingNav } from "@/components/marketing/marketing-nav";
 import { Hero } from "@/components/marketing/hero";
 import { Stats } from "@/components/marketing/stats";
 import { About } from "@/components/marketing/about";
@@ -14,16 +13,19 @@ import { MarketingFooter } from "@/components/marketing/marketing-footer";
 export default function HomePage() {
   return (
     <div className="min-h-screen scroll-smooth">
-      <MarketingNav />
-      <main className="space-y-20 pb-20 sm:space-y-28">
+      <main className="pb-20">
+        {/* Hero + Stats overlap, so they're isolated from the section rhythm below */}
         <Hero />
         <Stats />
-        <About />
-        <Services />
-        <CoursesShowcase />
-        <Feedback />
-        <Contact />
-        <CtaBanner />
+
+        <div className="space-y-20 pt-20 sm:space-y-28 sm:pt-28">
+          <About />
+          <Services />
+          <CoursesShowcase />
+          <Feedback />
+          <Contact />
+          <CtaBanner />
+        </div>
       </main>
       <MarketingFooter />
     </div>

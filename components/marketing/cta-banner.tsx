@@ -31,16 +31,26 @@ export function CtaBanner() {
           <p className="text-base text-white/85 sm:text-lg">
             {t("marketing.cta.subtitle")}
           </p>
-          <Button
-            asChild
-            size="lg"
-            className="bg-white text-primary hover:bg-white/90"
-          >
-            <Link href="/signup">
-              {t("marketing.cta.button")}
-              <ArrowRight className="size-4 rtl-flip" />
-            </Link>
-          </Button>
+          <div className="flex flex-wrap items-center justify-center gap-3">
+            <Button
+              asChild
+              size="lg"
+              variant="outline"
+              className="border-white/40 bg-transparent text-white hover:bg-white/10 hover:text-white"
+            >
+              <a href="#contact">{t("marketing.cta.secondaryButton")}</a>
+            </Button>
+            <Button
+              asChild
+              size="lg"
+              className="bg-white text-primary hover:bg-white/90"
+            >
+              <a href="#services">
+                {t("nav.browseCourses")}
+                <ArrowRight className="size-4 rtl-flip" />
+              </a>
+            </Button>
+          </div>
         </div>
       </motion.div>
     </section>

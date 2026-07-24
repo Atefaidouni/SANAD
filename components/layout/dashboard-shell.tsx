@@ -100,9 +100,9 @@ export function DashboardShell({
 
   /** `scope` keeps the shared-layout pill id unique between the desktop sidebar
    *  and the (separately mounted) mobile drawer. */
-  // Admin sidebar stays dark-navy for an "authority" feel, even in light mode.
-  // Student/teacher sidebars use the green gradient in light mode, dark-navy in dark mode.
-  const sidebarSurfaceClass = role === "admin" ? "sidebar-surface-admin" : "sidebar-surface";
+  // Every role shares the same sidebar treatment: the green gradient in light
+  // mode, green fading to dark navy in dark mode.
+  const sidebarSurfaceClass = "sidebar-surface";
 
   const renderSidebar = (scope: "desktop" | "mobile") => (
     <div className="flex h-full flex-col gap-2 p-4">

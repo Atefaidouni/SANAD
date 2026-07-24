@@ -324,13 +324,24 @@ const mutations = {
   },
 
   async createCourse(current: User | null, args: { input: Record<string, unknown> }): Promise<Result<{ courseId: string }>> {
-    requireAdmin(current);
+    // Admins may create a course for any teacher; an approved teacher may only
+    // create a course assigned to themselves (identity is never taken from the
+    // client — it's always pinned to the caller's own session).
+    const actor = requireAuth(current);
+    const isAdmin = actor.role === "admin";
+    if (!isAdmin && !(actor.role === "teacher" && actor.approved)) {
+      throw new AuthError("forbidden");
+    }
     const input = args.input as {
       title: string; titleAr?: string; subject: string; level: Level; division?: string;
       price: number; teacherName: string; teacherEmail?: string; zoomUrl?: string;
       thumbnail?: string; tags?: string[]; description?: string; isPopular?: boolean;
       isGoldPack?: boolean; codeCount?: number;
     };
+    const teacherName = isAdmin ? input.teacherName : `${actor.firstName} ${actor.lastName}`.trim();
+    const teacherEmail = isAdmin
+      ? input.teacherEmail?.trim().toLowerCase() || null
+      : actor.email.toLowerCase();
     const [row] = await db.insert(schema.courses).values({
       title: input.title,
       titleAr: input.titleAr,
@@ -339,8 +350,8 @@ const mutations = {
       level: input.level,
       division: input.division,
       price: input.price,
-      teacherName: input.teacherName,
-      teacherEmail: input.teacherEmail?.trim().toLowerCase() || null,
+      teacherName,
+      teacherEmail,
       zoomUrl: input.zoomUrl,
       thumbnail: input.thumbnail || "https://images.unsplash.com/photo-1503676260728-1c00da094a0b?auto=format&fit=crop&w=900&q=70",
       tags: input.tags ?? [],
@@ -368,6 +379,27 @@ const mutations = {
     // Drop fields that aren't real columns / shouldn't be set directly.
     delete patch.id; delete patch.createdAt; delete patch.studentsCount;
     if (Object.keys(patch).length) await db.update(schema.courses).set(patch).where(eq(schema.courses.id, args.id));
+    return ok();
+  },
+
+  async deleteCourse(current: User | null, args: { id: string }): Promise<Result> {
+    requireAdmin(current);
+    const courseId = args.id;
+
+    const questionRows = await db.select({ id: schema.questions.id }).from(schema.questions)
+      .where(eq(schema.questions.courseId, courseId));
+    const questionIds = questionRows.map((q) => q.id);
+    if (questionIds.length) {
+      await db.delete(schema.replies).where(inArray(schema.replies.questionId, questionIds));
+    }
+    await db.delete(schema.questions).where(eq(schema.questions.courseId, courseId));
+    await db.delete(schema.bookOrders).where(eq(schema.bookOrders.courseId, courseId));
+    await db.delete(schema.enrollments).where(eq(schema.enrollments.courseId, courseId));
+    await db.delete(schema.savedCourses).where(eq(schema.savedCourses.courseId, courseId));
+    await db.delete(schema.courseCodes).where(eq(schema.courseCodes.courseId, courseId));
+    await db.delete(schema.lessons).where(eq(schema.lessons.courseId, courseId));
+    await db.delete(schema.courses).where(eq(schema.courses.id, courseId));
+
     return ok();
   },
 

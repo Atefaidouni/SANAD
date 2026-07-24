@@ -16,8 +16,8 @@ export function Stats() {
   ];
 
   return (
-    <section className="container">
-      <div className="grid grid-cols-2 gap-4 rounded-3xl border border-border bg-card p-6 shadow-soft sm:p-8 lg:grid-cols-4">
+    <section className="container relative z-10 -mt-10 sm:-mt-14">
+      <div className="grid grid-cols-2 gap-4 rounded-3xl border border-border bg-card p-6 shadow-brand sm:p-8 lg:grid-cols-4">
         {items.map((item, i) => {
           const Icon = item.icon;
           return (

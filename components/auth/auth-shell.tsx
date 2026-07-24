@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import Link from "next/link";
+import { CheckCircle2, Home, RotateCw } from "lucide-react";
 import { SanadLogo } from "@/components/shared/sanad-logo";
 import { LanguageSwitcher } from "@/components/shared/language-switcher";
 import { ThemeToggle } from "@/components/shared/theme-toggle";
@@ -31,55 +32,78 @@ export function AuthShell({
   }, [redirectIfAuthed, hydrated, session, router]);
 
   return (
-    <div className="grid min-h-screen lg:grid-cols-2">
-      {/* Brand panel — big logo hero */}
-      <aside className="relative hidden flex-col items-center justify-center overflow-hidden bg-brand-gradient p-10 text-center text-white lg:flex">
-        <div className="grid-pattern absolute inset-0 opacity-20" />
-        <div className="pointer-events-none absolute -bottom-24 -end-24 size-[28rem] rounded-full bg-white/10 blur-3xl" />
+    <div className="relative flex min-h-screen items-center justify-center overflow-hidden p-4 py-10 sm:p-8">
+      <AmbientBackground />
 
-        <div className="relative flex flex-col items-center gap-8">
-          <Link href="/" aria-label="Sanad" className="inline-block">
-            <SanadLogo tone="white" className="h-40 max-w-full sm:h-48 lg:h-56" />
-          </Link>
-          <div className="space-y-3">
-            <h2 className="text-3xl font-bold leading-tight">
-              {t("auth.panelTitle")}
-            </h2>
-            <p className="mx-auto max-w-md text-white/85">
-              {t("auth.panelSubtitle")}
-            </p>
+      <div className="absolute end-4 top-4 z-10 flex items-center gap-1 sm:end-6 sm:top-6">
+        <LanguageSwitcher />
+        <ThemeToggle />
+      </div>
+
+      <motion.div
+        initial={{ opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4 }}
+        className="grid w-full max-w-5xl overflow-hidden rounded-[2rem] border border-border bg-card shadow-2xl lg:grid-cols-2"
+      >
+        {/* Brand panel */}
+        <aside className="relative hidden flex-col justify-between overflow-hidden bg-brand-gradient p-8 text-white lg:flex">
+          <div
+            aria-hidden
+            className="absolute inset-0 opacity-[0.15]"
+            style={{
+              backgroundImage:
+                "radial-gradient(rgba(255,255,255,0.6) 1px, transparent 1px)",
+              backgroundSize: "22px 22px",
+            }}
+          />
+          <div
+            aria-hidden
+            className="pointer-events-none absolute -bottom-24 -end-24 size-[24rem] rounded-full bg-white/10 blur-3xl"
+          />
+
+          <div className="relative flex justify-end">
+            <Link
+              href="/"
+              className="inline-flex items-center gap-1.5 rounded-full border border-white/30 bg-white/10 px-4 py-2 text-sm font-medium backdrop-blur transition-colors hover:bg-white/20"
+            >
+              <Home className="size-4" />
+              {t("nav.home")}
+            </Link>
           </div>
-        </div>
 
-        <div className="absolute inset-x-0 bottom-6 text-xs text-white/60">
-          {t("marketing.footer.rights")}
-        </div>
-      </aside>
-
-      {/* Form side */}
-      <main className="relative flex flex-col overflow-hidden">
-        <AmbientBackground />
-        <div className="absolute end-4 top-4 flex items-center gap-1">
-          <LanguageSwitcher />
-          <ThemeToggle />
-        </div>
-
-        <div className="flex flex-1 items-center justify-center p-6 sm:p-10">
-          <motion.div
-            initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.4 }}
-            className="w-full max-w-md"
-          >
-            <div className="mb-8 flex justify-center lg:hidden">
-              <Link href="/" aria-label="Sanad" className="text-foreground">
-                <SanadLogo className="h-16" />
-              </Link>
+          <div className="relative space-y-4">
+            <div className="flex items-center gap-3">
+              <span className="grid size-9 shrink-0 place-items-center rounded-full bg-white/15">
+                <CheckCircle2 className="size-4" />
+              </span>
+              <p className="text-sm font-medium">{t("auth.panelFeature1")}</p>
             </div>
-            {children}
-          </motion.div>
-        </div>
-      </main>
+            <div className="flex items-center gap-3">
+              <span className="grid size-9 shrink-0 place-items-center rounded-full bg-white/15">
+                <RotateCw className="size-4" />
+              </span>
+              <p className="text-sm font-medium">{t("auth.panelFeature2")}</p>
+            </div>
+          </div>
+
+          <div className="relative flex justify-center pt-6">
+            <Link href="/" aria-label="Sanad">
+              <SanadLogo tone="white" className="h-14" />
+            </Link>
+          </div>
+        </aside>
+
+        {/* Form side */}
+        <main className="flex flex-col justify-center p-6 sm:p-10 lg:p-12">
+          <div className="mb-6 flex justify-center lg:hidden">
+            <Link href="/" aria-label="Sanad" className="text-foreground">
+              <SanadLogo className="h-14" />
+            </Link>
+          </div>
+          <div className="mx-auto w-full max-w-sm">{children}</div>
+        </main>
+      </motion.div>
     </div>
   );
 }

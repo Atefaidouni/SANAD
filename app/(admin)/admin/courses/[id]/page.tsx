@@ -1,9 +1,10 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { useRouter, notFound } from "next/navigation";
 import { toast } from "sonner";
-import { ArrowLeft, KeyRound, Plus, RefreshCw } from "lucide-react";
+import { ArrowLeft, KeyRound, Plus, RefreshCw, Trash2 } from "lucide-react";
 import { DashboardShell } from "@/components/layout/dashboard-shell";
 import { CourseForm } from "@/components/admin/course-form";
 import { RecordsManager } from "@/components/course/records-manager";
@@ -20,6 +21,8 @@ export default function CourseEditorPage({ params }: { params: { id: string } })
   const { t, locale } = useI18n();
   const router = useRouter();
   const store = useStore();
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   const course = store.getCourseWithMeta(params.id);
   if (!course) return notFound();
@@ -27,6 +30,18 @@ export default function CourseEditorPage({ params }: { params: { id: string } })
   const title = locale === "ar" && course.titleAr ? course.titleAr : course.title;
   const codes = store.getCodes(params.id);
   const rows = store.getStudentRows(params.id);
+
+  const onDelete = async () => {
+    setDeleting(true);
+    const res = await store.deleteCourse(params.id);
+    setDeleting(false);
+    if (!res.ok) {
+      toast.error("Couldn't delete the course. Please try again.");
+      return;
+    }
+    toast.success(t("admin.form.deletedToast"));
+    router.push("/admin/courses");
+  };
 
   return (
     <DashboardShell role="admin" title={title} subtitle={t("admin.manageCourses")}>
@@ -41,9 +56,43 @@ export default function CourseEditorPage({ params }: { params: { id: string } })
         <div className="grid gap-6 lg:grid-cols-[1.15fr_1fr]">
           {/* Edit form */}
           <Card>
-            <CardHeader>
+            <CardHeader className="flex-row items-center justify-between space-y-0">
               <CardTitle>{t("common.edit")}</CardTitle>
+              {confirmDelete ? (
+                <div className="flex items-center gap-1.5">
+                  <Button variant="ghost" size="sm" onClick={() => setConfirmDelete(false)} disabled={deleting}>
+                    {t("common.cancel")}
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    className="gap-1.5"
+                    onClick={onDelete}
+                    disabled={deleting}
+                  >
+                    <Trash2 className="size-4" />
+                    {t("admin.form.delete")}
+                  </Button>
+                </div>
+              ) : (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="gap-1.5 text-destructive hover:text-destructive"
+                  onClick={() => setConfirmDelete(true)}
+                >
+                  <Trash2 className="size-4" />
+                  {t("admin.form.delete")}
+                </Button>
+              )}
             </CardHeader>
+            {confirmDelete && (
+              <CardContent className="pt-0">
+                <p className="rounded-lg bg-destructive/10 p-2.5 text-xs font-medium text-destructive">
+                  {t("admin.form.deleteConfirm")}
+                </p>
+              </CardContent>
+            )}
             <CardContent>
               <CourseForm
                 mode="edit"

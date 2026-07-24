@@ -171,7 +171,7 @@
     "cta": {
       "title": "Ready to build a stronger study routine?",
       "subtitle": "Join thousands of students learning smarter with Sanad.",
-      "button": "Create your account"
+      "secondaryButton": "Contact us"
     },
     "footer": {
       "tagline": "The learning platform that follows every Algerian student to exam day.",
@@ -239,7 +239,9 @@
       "wrong_password": "Your current password is incorrect.",
       "password_mismatch": "Passwords do not match.",
       "password_weak": "Password must be at least 8 characters."
-    }
+    },
+    "panelFeature1": "Clear goals for every lesson",
+    "panelFeature2": "Track your progress with recorded sessions"
   },
   "dashboard": {
     "welcome": "Welcome back, {name}",
@@ -408,7 +410,21 @@
     "joined": "Joined",
     "editProfile": "Edit profile",
     "saveChanges": "Save changes",
-    "saved": "Profile updated."
+    "saved": "Profile updated.",
+    "verified": "Verified",
+    "avatarUpdated": "Avatar updated.",
+    "avatarUrlLabel": "Image URL",
+    "avatarUrlHint": "Paste an image link to use as your avatar.",
+    "changeAvatar": "Change avatar",
+    "notifications": "Notifications",
+    "notificationsSubtitle": "Recent study, payment, and account updates.",
+    "security": "Security",
+    "securitySubtitle": "Manage your password and sign-in session.",
+    "passwordRow": "Password",
+    "passwordRowHint": "Change it from Settings.",
+    "signOutRow": "Sign Out",
+    "signOutRowHint": "Sign out of this device from Settings.",
+    "goToSettings": "Settings"
   },
   "settings": {
     "title": "Settings",
@@ -464,7 +480,10 @@
       "create": "Create course",
       "update": "Save changes",
       "created": "Course created — secret codes generated automatically.",
-      "updated": "Course updated."
+      "updated": "Course updated.",
+      "delete": "Delete course",
+      "deleteConfirm": "Delete this course permanently? This removes all its lessons, codes, and student enrollments.",
+      "deletedToast": "Course deleted."
     },
     "codes": {
       "title": "Course secret codes",

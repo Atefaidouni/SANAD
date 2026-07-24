@@ -100,9 +100,6 @@ const config: Config = {
           from: { transform: "translateX(0)" },
           to: { transform: "translateX(-50%)" },
         },
-        orbit: {
-          to: { transform: "rotate(360deg)" },
-        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
@@ -110,7 +107,6 @@ const config: Config = {
         float: "float 6s ease-in-out infinite",
         "fade-up": "fade-up 0.5s ease-out both",
         marquee: "marquee 40s linear infinite",
-        orbit: "orbit 36s linear infinite",
       },
     },
   },

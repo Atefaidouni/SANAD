@@ -257,6 +257,10 @@ class SanadStore {
     return this.fire("updateCourse", { id, patch });
   }
 
+  async deleteCourse(id: string): Promise<Result> {
+    return this.rpc("deleteCourse", { id });
+  }
+
   getCoursesByTeacherEmail(email?: string | null): Course[] {
     if (!email) return [];
     const e = email.trim().toLowerCase();

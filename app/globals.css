@@ -113,7 +113,8 @@
     @apply bg-brand-gradient bg-clip-text text-transparent;
   }
 
-  /* Sanad sidebar surface: green gradient in light mode, solid dark navy in dark mode */
+  /* Sanad sidebar surface: green gradient in light mode, green fading into
+     dark navy in dark mode — same treatment for every role. */
   .sidebar-surface {
     background: linear-gradient(
       180deg,
@@ -123,12 +124,12 @@
     );
   }
   .dark .sidebar-surface {
-    background: hsl(var(--sidebar-dark));
-  }
-
-  /* Admin sidebar: always dark navy, in both light and dark mode (authority feel) */
-  .sidebar-surface-admin {
-    background: hsl(var(--sidebar-dark));
+    background: linear-gradient(
+      180deg,
+      hsl(var(--brand-blue)) 0%,
+      hsl(var(--sidebar-dark)) 55%,
+      hsl(var(--sidebar-dark)) 100%
+    );
   }
 
   /* Mirror an icon when in RTL (e.g. arrows that point "forward") */
