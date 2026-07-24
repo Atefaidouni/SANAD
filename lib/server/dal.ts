@@ -240,12 +240,17 @@ export async function registerUser(input: {
 
 /** Verify credentials; returns the user id on success. */
 export async function authenticate(email: string, password: string): Promise<Result<{ userId: string }>> {
-  const rows = await db.select().from(schema.users).where(eq(schema.users.email, email.trim().toLowerCase())).limit(1);
-  const row = rows[0];
-  if (!row) return fail("invalid_credentials");
-  const valid = await verifyPassword(password, row.passwordHash);
-  if (!valid) return fail("invalid_credentials");
-  return ok({ userId: row.id });
+  try {
+    const rows = await db.select().from(schema.users).where(eq(schema.users.email, email.trim().toLowerCase())).limit(1);
+    const row = rows[0];
+    if (!row) return fail("invalid_credentials");
+    const valid = await verifyPassword(password, row.passwordHash);
+    if (!valid) return fail("invalid_credentials");
+    return ok({ userId: row.id });
+  } catch (err) {
+    console.error("DB read failed in authenticate:", err);
+    return fail("service_unavailable");
+  }
 }
 
 export async function resetUserPassword(email: string, newPassword: string): Promise<Result> {
@@ -324,20 +329,16 @@ const mutations = {
   },
 
   async createCourse(current: User | null, args: { input: Record<string, unknown> }): Promise<Result<{ courseId: string }>> {
-    // Admins may create a course for any teacher; an approved teacher may only
-    // create a course assigned to themselves (identity is never taken from the
-    // client — it's always pinned to the caller's own session).
+    // Only admins may create courses. Teachers are not allowed to add courses.
     const actor = requireAuth(current);
-    const isAdmin = actor.role === "admin";
-    if (!isAdmin && !(actor.role === "teacher" && actor.approved)) {
-      throw new AuthError("forbidden");
-    }
+    requireAdmin(current);
     const input = args.input as {
       title: string; titleAr?: string; subject: string; level: Level; division?: string;
       price: number; teacherName: string; teacherEmail?: string; zoomUrl?: string;
       thumbnail?: string; tags?: string[]; description?: string; isPopular?: boolean;
       isGoldPack?: boolean; codeCount?: number;
     };
+    const isAdmin = actor.role === "admin";
     const teacherName = isAdmin ? input.teacherName : `${actor.firstName} ${actor.lastName}`.trim();
     const teacherEmail = isAdmin
       ? input.teacherEmail?.trim().toLowerCase() || null

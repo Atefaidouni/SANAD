@@ -5,38 +5,38 @@
 @layer base {
   :root {
     /* Neutrals (light) */
-    --background: 162 76% 97%; /* #F0FDF9 mint */
-    --foreground: 222 47% 11%;
+    --background: 153 70% 97%; /* soft mint */
+    --foreground: 215 28% 12%;
 
     --card: 0 0% 100%;
-    --card-foreground: 222 47% 11%;
+    --card-foreground: 215 28% 12%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 222 47% 11%;
+    --popover-foreground: 215 28% 12%;
 
-    /* Brand: teal -> green (Sanad identity) */
-    --brand-blue: 161 94% 30%; /* #059669 emerald — gradient end */
-    --brand-teal: 173 66% 50%; /* #2DD4BF teal — gradient start */
-    --brand-accent-blue: 226 63% 53%; /* #3B5BDB — auth/CTA button accent */
-    --brand-gold: 38 92% 50%;
-    --brand-angle: 135deg;
+    /* Brand colors from Figma design */
+    --brand-blue: 148 60% 72%; /* #95D48D */
+    --brand-teal: 176 64% 55%; /* #2DD4BF */
+    --brand-accent-blue: 198 62% 55%; /* bright aqua accent */
+    --brand-gold: 39 95% 56%;
+    --brand-angle: 140deg;
 
-    --sidebar-grad-1: 141 76% 78%; /* #86EFAC */
-    --sidebar-grad-2: 141 70% 63%; /* #4ADE80 */
-    --sidebar-grad-3: 173 66% 50%; /* #2DD4BF */
-    --sidebar-dark: 221 39% 11%; /* #111827 */
+    --sidebar-grad-1: 145 73% 80%;
+    --sidebar-grad-2: 146 68% 70%;
+    --sidebar-grad-3: 176 64% 55%;
+    --sidebar-dark: 218 32% 12%;
 
-    --primary: 161 94% 30%;
+    --primary: 148 60% 72%;
     --primary-foreground: 210 40% 98%;
 
-    --secondary: 173 66% 50%;
+    --secondary: 176 64% 55%;
     --secondary-foreground: 0 0% 100%;
 
-    --accent: 162 60% 94%;
-    --accent-foreground: 161 70% 22%;
+    --accent: 171 60% 78%;
+    --accent-foreground: 163 68% 17%;
 
-    --muted: 210 40% 96%;
-    --muted-foreground: 215 16% 47%;
+    --muted: 150 60% 90%;
+    --muted-foreground: 214 18% 40%;
 
     --destructive: 0 84% 60%;
     --destructive-foreground: 210 40% 98%;
@@ -113,8 +113,35 @@
     @apply bg-brand-gradient bg-clip-text text-transparent;
   }
 
-  /* Sanad sidebar surface: green gradient in light mode, green fading into
-     dark navy in dark mode — same treatment for every role. */
+  /* Exact gradients from Figma specs */
+  .bg-hero-gradient {
+    background: linear-gradient(135deg, rgba(120, 208, 108, 0.6) 10%, #95D48D 50%, rgba(45, 212, 191, 0.7) 100%);
+  }
+
+  .bg-feedback-card {
+    background: linear-gradient(180deg, #3CCB7F 0%, #37549C 100%);
+  }
+
+  .bg-cta-radial {
+    background: radial-gradient(circle at center, #95D48D 0%, #2DD4BF 100%);
+  }
+
+  /* Glassmorphism utility */
+  .glass-nav {
+    background: rgba(255, 255, 255, 0.45);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.6);
+  }
+
+  .dark .glass-nav {
+    background: rgba(15, 23, 42, 0.6);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+  }
+
+  /* Sanad sidebar surface */
   .sidebar-surface {
     background: linear-gradient(
       180deg,
@@ -162,18 +189,5 @@
   /* Reusable hover-lift micro-interaction for interactive surfaces */
   .hover-lift {
     @apply transition-all duration-300 ease-out hover:-translate-y-1 hover:shadow-brand;
-  }
-}
-
-/* Respect users who prefer less motion: neutralise CSS animations/transitions
-   globally. (Framer Motion components opt out separately via useReducedMotion.) */
-@media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
-    animation-duration: 0.001ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.001ms !important;
-    scroll-behavior: auto !important;
   }
 }

@@ -8,6 +8,7 @@ import {
   CheckCircle2,
   Play,
   Sparkles,
+  TrendingUp,
   Users,
   Video,
 } from "lucide-react";
@@ -36,199 +37,96 @@ export function Hero() {
   return (
     <section id="home" className="relative scroll-mt-20">
       <div className="container pb-8 pt-3 sm:pb-12 sm:pt-4">
-        <div className="relative">
-          {/* Gradient card background — clipped separately so the sticky nav above it isn't trapped by overflow-hidden */}
-          <div
-            aria-hidden
-            className="absolute inset-0 -z-10 overflow-hidden rounded-[2rem] bg-brand-gradient sm:rounded-[2.5rem]"
-          >
-            <motion.div
-              animate={{ opacity: [0.15, 0.3, 0.15], scale: [1, 1.1, 1] }}
-              transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
-              className="absolute -top-24 start-1/3 size-[28rem] rounded-full bg-white/10 blur-3xl"
-            />
-            <div
-              className="absolute inset-0 opacity-[0.15]"
-              style={{
-                backgroundImage:
-                  "radial-gradient(rgba(255,255,255,0.6) 1px, transparent 1px)",
-                backgroundSize: "22px 22px",
-              }}
-            />
-          </div>
+        <div className="relative overflow-hidden rounded-[2.5rem] bg-hero-gradient p-4 sm:p-8">
+          <motion.div
+            animate={{ opacity: [0.15, 0.3, 0.15], scale: [1, 1.1, 1] }}
+            transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
+            className="absolute -top-24 start-1/3 size-[28rem] rounded-full bg-white/20 blur-3xl pointer-events-none"
+          />
 
           <MarketingNav />
 
-          <div className="grid items-center gap-10 px-5 pb-10 pt-4 sm:px-8 sm:pb-14 lg:grid-cols-2 lg:gap-12 lg:px-10 lg:pb-20 lg:pt-6">
-            {/* Copy */}
+          <div className="grid items-center gap-10 px-4 pb-8 pt-8 sm:px-8 sm:pb-12 lg:grid-cols-2 lg:gap-12 lg:px-12 lg:pb-16 lg:pt-10">
+            {/* Interactive Live Preview Card (Left side in RTL) */}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.6, delay: 0.15 }}
+              className="relative mx-auto w-full max-w-lg"
+            >
+              <div className="relative rounded-3xl border border-white/40 bg-white/70 p-6 shadow-2xl backdrop-blur-xl">
+                {/* Badges */}
+                <div className="mb-4 flex items-center justify-between">
+                  <span className="rounded-full bg-emerald-100/90 px-3 py-1 text-xs font-semibold text-emerald-800">
+                    حصة مباشرة 🔴
+                  </span>
+                  <span className="rounded-full bg-slate-100/90 px-3 py-1 text-xs font-semibold text-slate-700">
+                    20+ أستاذ
+                  </span>
+                </div>
+
+                {/* Video / Session Box */}
+                <div className="relative aspect-[16/10] overflow-hidden rounded-2xl bg-gradient-to-br from-indigo-50/80 to-blue-100/80 p-6 flex flex-col items-center justify-center text-center shadow-inner">
+                  <div className="grid size-14 place-items-center rounded-full bg-teal-400 text-white shadow-lg transition-transform hover:scale-110">
+                    <Play className="size-6 fill-current ms-0.5" />
+                  </div>
+                  <h4 className="mt-4 text-base font-bold text-slate-900">
+                    Physic revision session
+                  </h4>
+                </div>
+
+                {/* Floating Bottom Progress Card */}
+                <div className="mt-4 flex items-center justify-between rounded-2xl border border-white/60 bg-white/90 p-4 shadow-sm">
+                  <div>
+                    <h5 className="text-sm font-semibold text-slate-900">تتبع التقدم</h5>
+                    <p className="text-xs text-slate-500">تدريب عملي وتقارير تحسن أسبوعية</p>
+                  </div>
+                  <div className="grid size-9 place-items-center rounded-full bg-emerald-100 text-emerald-600">
+                    <TrendingUp className="size-5" />
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+
+            {/* Copy (Right side in RTL) */}
             <motion.div
               variants={container}
               initial="hidden"
               animate="show"
               className="space-y-6 text-white"
             >
-              <motion.div variants={item}>
-                <Badge className="border-0 bg-white/15 px-3 py-1 text-white backdrop-blur">
-                  <Sparkles className="size-3.5" /> {t("marketing.hero.badge")}
-                </Badge>
-              </motion.div>
-
               <motion.h1
                 variants={item}
-                className="text-balance text-4xl font-bold leading-[1.1] tracking-tight sm:text-5xl lg:text-6xl"
+                className="text-balance text-4xl font-extrabold leading-[1.15] tracking-tight sm:text-5xl lg:text-6xl text-white drop-shadow-sm"
               >
-                {t("marketing.hero.title")}
+                مرحباً بك في تجربة التعليم الرقمي
               </motion.h1>
 
               <motion.p
                 variants={item}
-                className="max-w-xl text-pretty text-base text-white/85 sm:text-lg"
+                className="max-w-xl text-base text-white/90 sm:text-lg font-medium leading-relaxed"
               >
-                {t("marketing.hero.subtitle")}
+                دروس تفاعلية، أساتذة خبراء، ومسار تعلّم شخصي مصمم لنجاحك.
               </motion.p>
 
-              <motion.div variants={item} className="flex flex-wrap gap-3">
+              <motion.div variants={item} className="flex flex-wrap items-center gap-4 pt-2">
                 <Button
                   asChild
                   size="lg"
-                  className="bg-white text-primary hover:bg-white/90"
+                  className="rounded-full bg-white px-8 text-base font-bold text-emerald-800 shadow-md hover:bg-slate-50"
                 >
                   <Link href="/signup">
-                    {t("marketing.hero.ctaStart")}
-                    <ArrowRight className="size-4 rtl-flip" />
+                    ابدأ الآن
                   </Link>
                 </Button>
                 <Button
                   asChild
                   size="lg"
                   variant="outline"
-                  className="border-white/40 bg-transparent text-white hover:bg-white/10 hover:text-white"
+                  className="rounded-full border-white/60 bg-white/20 px-8 text-base font-medium text-white backdrop-blur hover:bg-white/30 hover:text-white"
                 >
-                  <Link href="/login">{t("marketing.hero.ctaBrowse")}</Link>
+                  <Link href="/login">تصفح الدورات</Link>
                 </Button>
-              </motion.div>
-
-              <motion.div variants={item} className="flex items-center gap-6 pt-2">
-                <motion.div
-                  className="flex -space-x-3 rtl:space-x-reverse"
-                  variants={{
-                    hidden: {},
-                    show: { transition: { staggerChildren: 0.08, delayChildren: 0.2 } },
-                  }}
-                >
-                  {[68, 45, 33, 12].map((n) => (
-                    <motion.img
-                      key={n}
-                      variants={{
-                        hidden: { opacity: 0, scale: 0.4 },
-                        show: { opacity: 1, scale: 1 },
-                      }}
-                      whileHover={{ y: -4, scale: 1.12, zIndex: 10 }}
-                      src={`https://i.pravatar.cc/80?img=${n}`}
-                      alt=""
-                      className="size-9 rounded-full border-2 border-white/40 object-cover"
-                    />
-                  ))}
-                </motion.div>
-                <p className="text-sm text-white/80">
-                  <span className="font-bold text-white">2,000+</span>{" "}
-                  {t("marketing.stats.students")}
-                </p>
-              </motion.div>
-            </motion.div>
-
-            {/* Floating live-session preview */}
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.6, delay: 0.15 }}
-              className="relative mx-auto w-full max-w-md"
-            >
-              <motion.div
-                className="animate-float"
-                whileHover={{ scale: 1.02, rotate: -0.5 }}
-                transition={{ type: "spring", stiffness: 200, damping: 18 }}
-              >
-                <div className="overflow-hidden rounded-3xl border border-white/20 bg-card shadow-2xl">
-                  {/* Live header */}
-                  <div className="relative aspect-video overflow-hidden bg-brand-gradient">
-                    <Image
-                      src="https://images.unsplash.com/photo-1509228468518-180dd4864904?auto=format&fit=crop&w=900&q=70"
-                      alt={t("marketing.hero.liveCardTitle")}
-                      fill
-                      sizes="(max-width: 1024px) 100vw, 28rem"
-                      className="object-cover"
-                      priority
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-tr from-primary/70 to-secondary/55" />
-                    <div className="grid-pattern absolute inset-0 opacity-25" />
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <motion.span
-                        animate={{ scale: [1, 1.08, 1] }}
-                        transition={{ duration: 2.4, repeat: Infinity, ease: "easeInOut" }}
-                        className="grid size-16 place-items-center rounded-full bg-white/20 backdrop-blur"
-                      >
-                        <Play className="size-7 fill-white text-white" />
-                      </motion.span>
-                    </div>
-                    <div className="absolute start-4 top-4">
-                      <Badge className="border-0 bg-red-500 text-white">
-                        <span className="me-1 inline-block size-1.5 animate-pulse rounded-full bg-white" />
-                        {t("marketing.hero.liveCardStatus")}
-                      </Badge>
-                    </div>
-                    <div className="absolute end-4 top-4">
-                      <Badge className="border-0 bg-black/30 text-white backdrop-blur">
-                        <Users className="size-3" /> 248
-                      </Badge>
-                    </div>
-                  </div>
-
-                  {/* Card body */}
-                  <div className="space-y-3 p-5">
-                    <div className="flex items-center gap-2 text-primary">
-                      <Video className="size-4" />
-                      <span className="text-xs font-semibold uppercase tracking-wide">
-                        Zoom
-                      </span>
-                    </div>
-                    <h3 className="text-lg font-semibold">
-                      {t("marketing.hero.liveCardTitle")}
-                    </h3>
-                    <p className="text-sm text-muted-foreground">
-                      {t("marketing.hero.liveCardTeacher")}
-                    </p>
-                    <div className="space-y-1.5 pt-1">
-                      <div className="flex justify-between text-xs font-medium">
-                        <span className="text-muted-foreground">
-                          {t("record.progress")}
-                        </span>
-                        <span className="text-primary">50%</span>
-                      </div>
-                      <Progress value={50} />
-                    </div>
-                  </div>
-                </div>
-              </motion.div>
-
-              {/* Progress toast */}
-              <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.7, duration: 0.5 }}
-                className="absolute -bottom-5 -start-4 flex items-center gap-3 rounded-2xl border border-border bg-card p-3 pe-5 shadow-soft sm:-start-8"
-              >
-                <span className="grid size-10 place-items-center rounded-full bg-emerald-500/15 text-emerald-500">
-                  <CheckCircle2 className="size-5" />
-                </span>
-                <div>
-                  <p className="text-sm font-semibold">
-                    {t("marketing.hero.toastTitle")}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    {t("marketing.hero.toastBody")}
-                  </p>
-                </div>
               </motion.div>
             </motion.div>
           </div>

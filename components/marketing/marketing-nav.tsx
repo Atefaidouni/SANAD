@@ -34,66 +34,52 @@ export function MarketingNav() {
   const [scrolled, setScrolled] = React.useState(false);
 
   React.useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 260);
+    const onScroll = () => setScrolled(window.scrollY > 150);
     onScroll();
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
   const dashHref = session ? homePathForRole(session.user.role) : null;
-  const onBrand = !scrolled;
 
   return (
     <motion.header
       initial={reduce ? { opacity: 0 } : { y: -30, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
       transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-      className={cn(
-        "sticky top-0 z-40 transition-all duration-300",
-        scrolled
-          ? "border-b border-border bg-background/85 shadow-soft backdrop-blur-md"
-          : "border-b border-transparent bg-transparent"
-      )}
+      className="sticky top-4 z-50 px-4 sm:px-8"
     >
       <div
         className={cn(
-          "container flex items-center justify-between gap-4 transition-all duration-300",
-          scrolled ? "h-14" : "h-20"
+          "mx-auto flex max-w-6xl items-center justify-between gap-4 rounded-full px-5 py-2.5 transition-all duration-300",
+          scrolled
+            ? "glass-nav shadow-lg border border-white/60 bg-white/70 dark:bg-slate-900/80 backdrop-blur-xl"
+            : "glass-nav shadow-sm border border-white/40 bg-white/35 dark:bg-slate-900/40 backdrop-blur-md"
         )}
       >
-        <Logo onBrand={onBrand} />
+        <Logo size="sm" />
 
-        <nav className="hidden items-center gap-1 lg:flex">
+        <nav className="hidden items-center gap-1.5 lg:flex">
           {LINKS.map((l) => (
             <a
               key={l.href}
               href={l.href}
-              className={cn(
-                "rounded-lg px-3 py-2 text-sm font-medium transition-colors",
-                onBrand
-                  ? "text-white/80 hover:bg-white/10 hover:text-white"
-                  : "text-muted-foreground hover:bg-accent hover:text-foreground"
-              )}
+              className="rounded-full px-4 py-1.5 text-sm font-medium text-slate-800 transition-colors hover:bg-white/40 dark:text-slate-100 dark:hover:bg-white/10"
             >
               {t(l.key)}
             </a>
           ))}
         </nav>
 
-        <div className="flex items-center gap-1.5">
-          <LanguageSwitcher
-            className={onBrand ? "text-white hover:bg-white/10 hover:text-white" : undefined}
-          />
-          <ThemeToggle
-            className={onBrand ? "text-white hover:bg-white/10 hover:text-white" : undefined}
-          />
-          <div className="hidden items-center gap-1.5 sm:flex">
+        <div className="flex items-center gap-2">
+          <LanguageSwitcher className="text-slate-800 hover:bg-white/30 dark:text-slate-100" />
+          <ThemeToggle className="text-slate-800 hover:bg-white/30 dark:text-slate-100" />
+          <div className="hidden items-center gap-2 sm:flex">
             {dashHref ? (
               <Button
                 asChild
                 size="sm"
-                className={onBrand ? "bg-white text-primary hover:bg-white/90" : undefined}
-                variant={onBrand ? undefined : "brand"}
+                className="rounded-full bg-white text-slate-900 shadow-sm hover:bg-white/90 font-semibold"
               >
                 <Link href={dashHref}>{t("nav.dashboard")}</Link>
               </Button>
@@ -102,21 +88,15 @@ export function MarketingNav() {
                 <Button
                   asChild
                   size="sm"
-                  className={cn(
-                    "rounded-full",
-                    onBrand ? "bg-white text-primary hover:bg-white/90" : "bg-brand-gradient text-white hover:opacity-95"
-                  )}
+                  variant="ghost"
+                  className="rounded-full border border-emerald-700/20 bg-emerald-50/50 px-4 text-emerald-950 hover:bg-emerald-100/60 dark:text-white"
                 >
                   <Link href="/login">{t("nav.login")}</Link>
                 </Button>
                 <Button
                   asChild
                   size="sm"
-                  variant={onBrand ? "outline" : "ghost"}
-                  className={cn(
-                    "rounded-full",
-                    onBrand && "border-white/40 bg-transparent text-white hover:bg-white/10 hover:text-white"
-                  )}
+                  className="rounded-full bg-white px-5 text-emerald-900 shadow-sm hover:bg-slate-50 font-semibold"
                 >
                   <Link href="/signup">{t("nav.signup")}</Link>
                 </Button>
@@ -126,7 +106,7 @@ export function MarketingNav() {
           <Button
             variant="ghost"
             size="icon"
-            className={cn("lg:hidden", onBrand && "text-white hover:bg-white/10 hover:text-white")}
+            className="rounded-full text-slate-800 hover:bg-white/30 lg:hidden dark:text-slate-100"
             onClick={() => setOpen((o) => !o)}
             aria-label="Menu"
           >
@@ -137,31 +117,21 @@ export function MarketingNav() {
 
       {/* Mobile menu */}
       {open && (
-        <div
-          className={cn(
-            "border-t lg:hidden",
-            onBrand ? "border-white/15 bg-primary" : "border-border bg-background"
-          )}
-        >
-          <nav className="container flex flex-col gap-1 py-4">
+        <div className="mt-2 rounded-2xl border border-white/60 bg-white/90 p-4 shadow-xl backdrop-blur-xl lg:hidden dark:bg-slate-900/90">
+          <nav className="flex flex-col gap-2">
             {LINKS.map((l) => (
               <a
                 key={l.href}
                 href={l.href}
                 onClick={() => setOpen(false)}
-                className={cn(
-                  "rounded-lg px-3 py-2.5 text-sm font-medium",
-                  onBrand
-                    ? "text-white/85 hover:bg-white/10 hover:text-white"
-                    : "text-muted-foreground hover:bg-accent hover:text-foreground"
-                )}
+                className="rounded-xl px-4 py-2.5 text-sm font-semibold text-slate-800 hover:bg-slate-100 dark:text-slate-100 dark:hover:bg-slate-800"
               >
                 {t(l.key)}
               </a>
             ))}
             <div className="mt-2 flex gap-2">
               {dashHref ? (
-                <Button asChild variant="brand" className="flex-1">
+                <Button asChild className="flex-1 rounded-full bg-emerald-600 text-white">
                   <Link href={dashHref}>{t("nav.dashboard")}</Link>
                 </Button>
               ) : (
@@ -169,16 +139,15 @@ export function MarketingNav() {
                   <Button
                     asChild
                     variant="outline"
-                    className={cn("flex-1", onBrand && "border-white/40 bg-transparent text-white hover:bg-white/10 hover:text-white")}
+                    className="flex-1 rounded-full border-slate-200 bg-white text-slate-800 hover:bg-slate-50"
                   >
-                    <Link href="/signup">{t("nav.signup")}</Link>
+                    <Link href="/login">{t("nav.login")}</Link>
                   </Button>
                   <Button
                     asChild
-                    variant="brand"
-                    className={cn("flex-1", onBrand && "bg-white text-primary hover:bg-white/90")}
+                    className="flex-1 rounded-full bg-emerald-600 text-white hover:bg-emerald-700 font-semibold"
                   >
-                    <Link href="/login">{t("nav.login")}</Link>
+                    <Link href="/signup">{t("nav.signup")}</Link>
                   </Button>
                 </>
               )}

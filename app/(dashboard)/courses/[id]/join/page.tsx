@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useParams } from "next/navigation";
 import { notFound } from "next/navigation";
 import { useQueryParams } from "@/lib/hooks";
 import { useForm } from "react-hook-form";
@@ -53,13 +53,16 @@ type AccessChoice = "have" | "order" | null;
 const PHASE_JOINED = 2;
 const PHASE_ORDERED = 3;
 
-export default function JoinCoursePage({ params }: { params: { id: string } }) {
+export default function JoinCoursePage() {
   const { t, locale } = useI18n();
   const router = useRouter();
   const store = useStore();
   const session = useSession();
+  const params = useParams();
+  const id = params?.id as string | undefined;
+  if (!id) return notFound();
 
-  const course = store.getCourse(params.id);
+  const course = store.getCourse(id);
   const user = store.getUser(session?.user.id);
 
   const [step, setStep] = useState(0); // 0 info, 1 access, 2 joined, 3 ordered
@@ -103,7 +106,7 @@ export default function JoinCoursePage({ params }: { params: { id: string } }) {
   const title = locale === "ar" && course.titleAr ? course.titleAr : course.title;
 
   // Already enrolled? Offer the record instead of the join form.
-  const existing = store.getEnrollment(session?.user.id ?? "", params.id);
+  const existing = store.getEnrollment(session?.user.id ?? "", id);
   if (existing?.status === "active") {
     return (
       <DashboardShell role="student" title={title}>
@@ -113,7 +116,7 @@ export default function JoinCoursePage({ params }: { params: { id: string } }) {
           </div>
           <h2 className="text-xl font-bold">{t("courses.joined")}</h2>
           <Button asChild variant="brand" className="mt-5 gap-2">
-            <Link href={`/courses/${params.id}`}>
+            <Link href={`/courses/${id}`}>
               {t("join.goToCourse")}
               <ArrowRight className="size-4 rtl-flip" />
             </Link>
@@ -140,7 +143,7 @@ export default function JoinCoursePage({ params }: { params: { id: string } }) {
       }
       const join = await store.joinCourse({
         userId: session!.user.id,
-        courseId: params.id,
+              courseId: id,
         code: values.code,
       });
       if (!join.ok) {
@@ -165,7 +168,7 @@ export default function JoinCoursePage({ params }: { params: { id: string } }) {
       if (!ok) return;
       await store.requestBook({
         userId: session!.user.id,
-        courseId: params.id,
+        courseId: id,
         fullName: values.fullName,
         phone: values.phone,
         wilaya: values.wilaya!,
@@ -194,7 +197,7 @@ export default function JoinCoursePage({ params }: { params: { id: string } }) {
           <h2 className="text-2xl font-bold">{t("join.success")}</h2>
           <p className="mt-2 text-muted-foreground">{t("join.successBody")}</p>
           <Button asChild variant="brand" size="lg" className="mt-6 gap-2">
-            <Link href={`/courses/${params.id}`}>
+            <Link href={`/courses/${id}`}>
               {t("join.goToCourse")}
               <ArrowRight className="size-4 rtl-flip" />
             </Link>
@@ -238,7 +241,7 @@ export default function JoinCoursePage({ params }: { params: { id: string } }) {
     <DashboardShell role="student" title={t("join.title", { course: title })}>
       <div className="mx-auto max-w-2xl space-y-6">
         <Button asChild variant="ghost" size="sm" className="gap-1.5">
-          <Link href={`/courses/${params.id}`}>
+            <Link href={`/courses/${id}`}>
             <ArrowLeft className="size-4 rtl-flip" />
             {title}
           </Link>

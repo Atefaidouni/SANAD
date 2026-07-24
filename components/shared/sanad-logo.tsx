@@ -1,7 +1,6 @@
 "use client";
 
 import { cn } from "@/lib/utils";
-import { SanadMark } from "./sanad-mark";
 
 /**
  * Full Sanad logo lockup — the stacked-books emblem alongside the "سند / Sanad"
@@ -16,10 +15,17 @@ export function SanadLogo({
   tone?: "brand" | "white";
 }) {
   const isWhite = tone === "white";
-
   return (
     <span className={cn("inline-flex items-center gap-3", className)}>
-      <SanadMark tone={tone} className="h-full w-auto" />
+      <img
+        src="/logo.png"
+        alt="Sanad"
+        onError={(e) => {
+          const img = e.currentTarget as HTMLImageElement;
+          img.src = "/logo.svg";
+        }}
+        className="h-10 w-auto object-contain"
+      />
       <span className="flex flex-col items-start leading-none">
         <span
           className={cn(

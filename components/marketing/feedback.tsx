@@ -1,84 +1,57 @@
 "use client";
 
-import { useReducedMotion } from "framer-motion";
-import { Quote } from "lucide-react";
-import { SectionHeading } from "./section-heading";
-import { StarRating } from "@/components/shared/star-rating";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { useI18n } from "@/lib/i18n/provider";
-import { useStore } from "@/lib/mock/use-store";
-import { initials } from "@/lib/utils";
-import type { Review } from "@/lib/types";
+import { motion } from "framer-motion";
+import { Star } from "lucide-react";
 
-/** How many cards ride the marquee (kept readable; sampled from all reviews). */
-const MARQUEE_MAX = 10;
+const REVIEWS = [
+  {
+    id: 1,
+    rating: 5,
+    body: "MAFAZ helped me organize my study week. The live support makes it easy to ask questions when I get stuck.",
+    name: "لينا م.",
+    role: "Middle school student",
+  },
+  {
+    id: 2,
+    rating: 5,
+    body: "MAFAZ helped me organize my study week. The live support makes it easy to ask questions when I get stuck.",
+    name: "أحمد ك.",
+    role: "High school student",
+  },
+  {
+    id: 3,
+    rating: 5,
+    body: "MAFAZ helped me organize my study week. The live support makes it easy to ask questions when I get stuck.",
+    name: "مريم ب.",
+    role: "Middle school student",
+  },
+  {
+    id: 4,
+    rating: 5,
+    body: "MAFAZ helped me organize my study week. The live support makes it easy to ask questions when I get stuck.",
+    name: "ياسين ط.",
+    role: "Baccalaureate candidate",
+  },
+];
 
-function pickEvenly(arr: Review[], n: number): Review[] {
-  if (arr.length <= n) return arr;
-  const step = arr.length / n;
-  return Array.from({ length: n }, (_, i) => arr[Math.floor(i * step)]);
-}
-
-function ReviewCard({ review, locale }: { review: Review; locale: string }) {
-  const body = locale === "ar" && review.bodyAr ? review.bodyAr : review.body;
-  const [first, ...rest] = review.authorName.split(" ");
+function ReviewCard({ review }: { review: typeof REVIEWS[0] }) {
   return (
-    <figure className="flex w-72 shrink-0 flex-col gap-4 rounded-3xl bg-brand-gradient p-6 text-white shadow-brand sm:w-80">
-      <div className="flex items-center justify-between">
-        <StarRating rating={review.rating} size="sm" />
-        <Quote className="size-5 text-white/30" />
+    <div className="flex w-[22rem] sm:w-[25rem] shrink-0 flex-col justify-between gap-5 rounded-[24px] border border-[#F1F5F9] bg-feedback-card p-7 text-white shadow-xl">
+      <div className="flex items-center gap-1">
+        {Array.from({ length: review.rating }).map((_, i) => (
+          <Star key={i} className="size-5 fill-amber-300 text-amber-300" />
+        ))}
       </div>
-      <blockquote className="line-clamp-4 flex-1 text-sm leading-relaxed text-white/95">
-        “{body}”
+      <blockquote className="text-sm font-medium leading-relaxed text-white/95 dir-ltr text-start">
+        “{review.body}”
       </blockquote>
-      <figcaption className="flex items-center gap-3 border-t border-white/20 pt-4">
-        <Avatar className="size-9 border-2 border-white/30">
-          <AvatarFallback className="bg-white/15 text-xs text-white">
-            {initials(first, rest.join(" "))}
-          </AvatarFallback>
-        </Avatar>
+      <div className="flex items-center gap-3 pt-2">
+        <div className="grid size-10 place-items-center rounded-full bg-teal-300/40 text-sm font-bold text-white border border-white/30">
+          {review.name.charAt(0)}
+        </div>
         <div className="min-w-0">
-          <p className="truncate text-sm font-semibold">{review.authorName}</p>
-          {review.authorRole && (
-            <p className="truncate text-xs text-white/70">{review.authorRole}</p>
-          )}
-        </div>
-      </figcaption>
-    </figure>
-  );
-}
-
-function Grid({ items, locale }: { items: Review[]; locale: string }) {
-  return (
-    <div className="mt-10 grid grid-cols-1 justify-items-center gap-4 sm:grid-cols-2 lg:grid-cols-3">
-      {items.map((r) => (
-        <ReviewCard key={r.id} review={r} locale={locale} />
-      ))}
-    </div>
-  );
-}
-
-/** Two rows scrolling in opposite directions, looping seamlessly. */
-function Marquee({ items, locale }: { items: Review[]; locale: string }) {
-  const rowA = items.slice(0, Math.ceil(items.length / 2));
-  const rowB = items.slice(Math.ceil(items.length / 2));
-  const trackA = [...rowA, ...rowA];
-  const trackB = [...rowB, ...rowB];
-
-  return (
-    <div className="mt-10 space-y-5 [mask-image:linear-gradient(to_right,transparent,black_6%,black_94%,transparent)]">
-      <div className="group overflow-hidden">
-        <div className="flex w-max gap-5 animate-marquee group-hover:[animation-play-state:paused]">
-          {trackA.map((r, i) => (
-            <ReviewCard key={`a-${r.id}-${i}`} review={r} locale={locale} />
-          ))}
-        </div>
-      </div>
-      <div className="group overflow-hidden">
-        <div className="flex w-max gap-5 animate-marquee [animation-direction:reverse] group-hover:[animation-play-state:paused]">
-          {trackB.map((r, i) => (
-            <ReviewCard key={`b-${r.id}-${i}`} review={r} locale={locale} />
-          ))}
+          <p className="truncate text-sm font-bold text-white">{review.name}</p>
+          <p className="truncate text-xs text-teal-100/80">{review.role}</p>
         </div>
       </div>
     </div>
@@ -86,31 +59,38 @@ function Marquee({ items, locale }: { items: Review[]; locale: string }) {
 }
 
 export function Feedback() {
-  const { t, locale } = useI18n();
-  const store = useStore();
-  const reduce = useReducedMotion();
-  const reviews = store.getReviews();
-  if (reviews.length === 0) return null;
-
-  const items = pickEvenly(reviews, MARQUEE_MAX);
+  const items = [...REVIEWS, ...REVIEWS, ...REVIEWS];
 
   return (
-    <section id="feedback" className="scroll-mt-20">
-      <div className="container">
-        <SectionHeading
-          badge={t("marketing.feedback.badge")}
-          title={t("marketing.feedback.title")}
-          subtitle={t("marketing.feedback.subtitle")}
-        />
+    <section id="feedback" className="scroll-mt-20 py-10 overflow-hidden">
+      <div className="container text-center space-y-3 max-w-2xl mx-auto mb-12">
+        <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">
+          آراء الطلاب
+        </span>
+        <h2 className="text-3xl font-extrabold tracking-tight text-slate-900 sm:text-4xl">
+          الطلاب يشعرون بثقة أكبر بعد كل درس
+        </h2>
+        <p className="text-sm text-slate-600 sm:text-base leading-relaxed">
+          تقدم حقيقي يأتي من شرح واضح، أساتذة قريبين، ودورات تسمح للطالب بمتابعة مستواه بالوتيرة المناسبة.
+        </p>
       </div>
 
-      {reduce ? (
-        <div className="container">
-          <Grid items={items} locale={locale} />
-        </div>
-      ) : (
-        <Marquee items={items} locale={locale} />
-      )}
+      {/* Infinite Auto-Scroll Carousel */}
+      <div className="relative w-full overflow-hidden py-4 [mask-image:linear-gradient(to_right,transparent,black_5%,black_95%,transparent)]">
+        <motion.div
+          animate={{ x: ["0%", "-50%"] }}
+          transition={{
+            duration: 25,
+            ease: "linear",
+            repeat: Infinity,
+          }}
+          className="flex gap-6 w-max"
+        >
+          {items.map((review, i) => (
+            <ReviewCard key={`${review.id}-${i}`} review={review} />
+          ))}
+        </motion.div>
+      </div>
     </section>
   );
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, useParams } from "next/navigation";
 import { ArrowLeft, ExternalLink, Lock, Video } from "lucide-react";
 import { DashboardShell } from "@/components/layout/dashboard-shell";
 import { RecordsManager } from "@/components/course/records-manager";
@@ -11,16 +11,19 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useI18n } from "@/lib/i18n/provider";
 import { useSession, useStore } from "@/lib/mock/use-store";
 
-export default function TeacherCoursePage({ params }: { params: { id: string } }) {
+export default function TeacherCoursePage() {
   const { t, locale } = useI18n();
   const store = useStore();
   const session = useSession();
+  const params = useParams();
+  const id = params?.id as string | undefined;
+  if (!id) return notFound();
 
-  const course = store.getCourseWithMeta(params.id);
+  const course = store.getCourseWithMeta(id);
   if (!course) return notFound();
 
   // Assigned teacher (or admin) — may view content and reply to students.
-  const canReply = store.canManageCourse(session?.user.id, params.id);
+  const canReply = store.canManageCourse(session?.user.id, id);
   const title = locale === "ar" && course.titleAr ? course.titleAr : course.title;
 
   return (
@@ -78,7 +81,7 @@ export default function TeacherCoursePage({ params }: { params: { id: string } }
                 <p className="text-sm text-muted-foreground">{t("teacher.recordsView")}</p>
               </CardHeader>
               <CardContent>
-                <RecordsManager courseId={params.id} readOnly />
+                <RecordsManager courseId={id} readOnly />
               </CardContent>
             </Card>
 
@@ -86,7 +89,7 @@ export default function TeacherCoursePage({ params }: { params: { id: string } }
             <Card>
               <CardContent className="p-4 sm:p-6">
                 <p className="mb-4 text-sm text-muted-foreground">{t("teacher.replyAccess")}</p>
-                <ForumSection courseId={params.id} />
+                <ForumSection courseId={id} />
               </CardContent>
             </Card>
           </>

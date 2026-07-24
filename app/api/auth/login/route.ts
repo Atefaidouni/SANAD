@@ -15,9 +15,10 @@ export async function POST(req: Request) {
   if (!res.ok) return NextResponse.json(res, { status: 401 });
 
   const userId = res.data!.userId;
-  cookies().set(SESSION_COOKIE, await createSessionToken(userId), sessionCookieOptions);
+  const cookieStore: any = await cookies();
+  cookieStore.set(SESSION_COOKIE, await createSessionToken(userId), sessionCookieOptions);
 
   const user = await getUserById(userId);
-  const snapshot = await buildSnapshot(user);
+  const snapshot = user ? await buildSnapshot(user) : null;
   return NextResponse.json({ ok: true, session: sessionFor(user), snapshot });
 }

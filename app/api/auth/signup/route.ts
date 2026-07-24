@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
+import { createSeedData } from "@/lib/mock/seed";
 import { createSessionToken, SESSION_COOKIE, sessionCookieOptions } from "@/lib/server/auth";
 import { buildSnapshot, getUserById, registerUser, sessionFor } from "@/lib/server/dal";
 import type { Role } from "@/lib/types";
@@ -20,9 +21,10 @@ export async function POST(req: Request) {
   if (!res.ok) return NextResponse.json(res, { status: 409 });
 
   const userId = res.data!.userId;
-  cookies().set(SESSION_COOKIE, await createSessionToken(userId), sessionCookieOptions);
+  const cookieStore: any = await cookies();
+  cookieStore.set(SESSION_COOKIE, await createSessionToken(userId), sessionCookieOptions);
 
   const user = await getUserById(userId);
-  const snapshot = await buildSnapshot(user);
+  const snapshot = user ? await buildSnapshot(user) : createSeedData();
   return NextResponse.json({ ok: true, session: sessionFor(user), snapshot });
 }

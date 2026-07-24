@@ -14,7 +14,6 @@ export default function HomePage() {
   return (
     <div className="min-h-screen scroll-smooth">
       <main className="pb-20">
-        {/* Hero + Stats overlap, so they're isolated from the section rhythm below */}
         <Hero />
         <Stats />
 

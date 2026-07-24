@@ -103,11 +103,14 @@
   "marketing": {
     "hero": {
       "badge": "Built for Algerian students",
-      "title": "Welcome to Your Ultimate Learning Experience",
-      "subtitle": "Personalized learning journeys, live revision sessions and a secret access code inside every book — Sanad keeps every student on track to the BEM and BAC.",
+      "title": "Welcome to digital learning",
+      "subtitle": "Interactive lessons, expert teachers, and a personalized path designed for your success.",
       "ctaStart": "Start now",
       "ctaBrowse": "Browse courses",
-      "liveCardTitle": "Live revision — Mathematics",
+      "liveBadge": "Live session",
+      "liveType": "Live revision class",
+      "liveCount": "20+ teachers",
+      "liveCardTitle": "Physical revision session",
       "liveCardTeacher": "with Amine Belkacem",
       "liveCardStatus": "Live now",
       "toastTitle": "Progress saved",
@@ -122,12 +125,12 @@
     "about": {
       "badge": "About Sanad",
       "title": "Learning support that follows every student",
-      "subtitle": "From the first lesson to the final exam, Sanad structures the journey so no student studies alone.",
-      "point1": "Enroll instantly with the secret code inside your book",
-      "point2": "Follow a personalized journey with clear progress",
+      "subtitle": "Sanad is a complete digital platform for Algerian middle and high school students. Structured content, live revision sessions, and continuous support until exam day.",
+      "point1": "Instantly join with the code inside your book",
+      "point2": "Follow a personalized learning path with clear progress",
       "point3": "Attend live revision sessions over Zoom",
-      "point4": "Ask questions and get answers from your teachers",
-      "imageAlt": "Students celebrating their baccalaureate graduation"
+      "point4": "Ask teachers questions and get quick answers",
+      "imageAlt": "Students celebrating their success"
     },
     "services": {
       "badge": "Services",
@@ -144,8 +147,8 @@
     },
     "feedback": {
       "badge": "Feedback",
-      "title": "Loved by students across Algeria",
-      "subtitle": "Real results from students who studied with Sanad."
+      "title": "Students feel more confident after every lesson",
+      "subtitle": "Real progress from clear lessons, interactive questions, and continuous performance tracking."
     },
     "showcase": {
       "badge": "Courses",
@@ -170,7 +173,7 @@
     },
     "cta": {
       "title": "Ready to build a stronger study routine?",
-      "subtitle": "Join thousands of students learning smarter with Sanad.",
+      "subtitle": "Browse available courses, choose your plan, and start a path that matches your level.",
       "secondaryButton": "Contact us"
     },
     "footer": {

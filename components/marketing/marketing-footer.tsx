@@ -2,68 +2,63 @@
 
 import Link from "next/link";
 import { Logo } from "@/components/shared/logo";
-import { useI18n } from "@/lib/i18n/provider";
+import { Mail, Phone } from "lucide-react";
 
 export function MarketingFooter() {
-  const { t } = useI18n();
-
-  const columns = [
-    {
-      title: t("marketing.footer.product"),
-      links: [
-        { label: t("nav.services"), href: "#services" },
-        { label: t("nav.browseCourses"), href: "/login" },
-        { label: t("dashboard.goldPack.badge"), href: "/signup" },
-      ],
-    },
-    {
-      title: t("marketing.footer.company"),
-      links: [
-        { label: t("nav.about"), href: "#about" },
-        { label: t("nav.feedback"), href: "#feedback" },
-        { label: t("nav.contact"), href: "#contact" },
-      ],
-    },
-    {
-      title: t("marketing.footer.legal"),
-      links: [
-        { label: t("marketing.footer.privacy"), href: "#" },
-        { label: t("marketing.footer.terms"), href: "#" },
-      ],
-    },
-  ];
-
   return (
-    <footer className="mt-8 border-t border-border bg-card">
+    <footer className="mt-12 border-t border-slate-200/80 bg-white">
       <div className="container py-12">
-        <div className="grid gap-10 lg:grid-cols-[1.5fr_1fr_1fr_1fr]">
-          <div className="space-y-3">
-            <Logo size="lg" />
-            <p className="max-w-xs text-sm text-muted-foreground">
-              {t("marketing.footer.tagline")}
+        <div className="grid gap-10 lg:grid-cols-[1.5fr_1fr_1fr]">
+          <div className="space-y-4">
+            <Logo size="md" />
+            <p className="max-w-xs text-sm leading-relaxed text-slate-600">
+              منصة تعليمية رقمية لطلاب المتوسط والثانوي في الجزائر.
             </p>
           </div>
-          {columns.map((col) => (
-            <div key={col.title} className="space-y-3">
-              <p className="text-sm font-semibold">{col.title}</p>
-              <ul className="space-y-2">
-                {col.links.map((link) => (
-                  <li key={link.label}>
-                    <Link
-                      href={link.href}
-                      className="text-sm text-muted-foreground transition-colors hover:text-foreground"
-                    >
-                      {link.label}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ))}
+
+          <div className="space-y-3">
+            <p className="text-sm font-bold text-slate-900">روابط سريعة</p>
+            <ul className="space-y-2">
+              <li>
+                <a href="#about" className="text-sm text-slate-600 transition-colors hover:text-slate-900">
+                  من نحن
+                </a>
+              </li>
+              <li>
+                <a href="#services" className="text-sm text-slate-600 transition-colors hover:text-slate-900">
+                  الخدمات
+                </a>
+              </li>
+              <li>
+                <a href="#feedback" className="text-sm text-slate-600 transition-colors hover:text-slate-900">
+                  آراء الطلاب
+                </a>
+              </li>
+              <li>
+                <a href="#contact" className="text-sm text-slate-600 transition-colors hover:text-slate-900">
+                  تواصل
+                </a>
+              </li>
+            </ul>
+          </div>
+
+          <div className="space-y-3">
+            <p className="text-sm font-bold text-slate-900">تواصل</p>
+            <ul className="space-y-2.5 text-sm text-slate-600">
+              <li className="flex items-center gap-2">
+                <Mail className="size-4 text-emerald-600" />
+                <span>Mafazacademy@gmail.com</span>
+              </li>
+              <li className="flex items-center gap-2">
+                <Phone className="size-4 text-emerald-600" />
+                <span dir="ltr">+213 791 152 178</span>
+              </li>
+            </ul>
+          </div>
         </div>
 
-        <div className="mt-10 border-t border-border pt-6 text-center text-sm text-muted-foreground">
-          {t("marketing.footer.rights")}
+        <div className="mt-10 border-t border-slate-100 pt-6 text-center text-xs text-slate-500">
+          © 2026 أكاديمية سند. جميع الحقوق محفوظة.
         </div>
       </div>
     </footer>

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { useRouter, notFound } from "next/navigation";
+import { useRouter, notFound, useParams } from "next/navigation";
 import { toast } from "sonner";
 import { ArrowLeft, KeyRound, Plus, RefreshCw, Trash2 } from "lucide-react";
 import { DashboardShell } from "@/components/layout/dashboard-shell";
@@ -17,23 +17,26 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useI18n } from "@/lib/i18n/provider";
 import { useStore } from "@/lib/mock/use-store";
 
-export default function CourseEditorPage({ params }: { params: { id: string } }) {
+export default function CourseEditorPage() {
   const { t, locale } = useI18n();
   const router = useRouter();
   const store = useStore();
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const params = useParams();
+  const id = params?.id as string | undefined;
+  if (!id) return notFound();
 
-  const course = store.getCourseWithMeta(params.id);
+  const course = store.getCourseWithMeta(id);
   if (!course) return notFound();
 
   const title = locale === "ar" && course.titleAr ? course.titleAr : course.title;
-  const codes = store.getCodes(params.id);
-  const rows = store.getStudentRows(params.id);
+  const codes = store.getCodes(id);
+  const rows = store.getStudentRows(id);
 
   const onDelete = async () => {
     setDeleting(true);
-    const res = await store.deleteCourse(params.id);
+    const res = await store.deleteCourse(id);
     setDeleting(false);
     if (!res.ok) {
       toast.error("Couldn't delete the course. Please try again.");
@@ -125,7 +128,7 @@ export default function CourseEditorPage({ params }: { params: { id: string } })
                   variant="outline"
                   className="gap-1.5"
                   onClick={() => {
-                    store.addCodes(params.id, 5);
+                    store.addCodes(id, 5);
                     toast.success(t("admin.codes.addMore"));
                   }}
                 >
@@ -137,7 +140,7 @@ export default function CourseEditorPage({ params }: { params: { id: string } })
                   variant="outline"
                   className="gap-1.5"
                   onClick={() => {
-                    store.regenerateCodes(params.id);
+                    store.regenerateCodes(id);
                     toast.success(t("admin.codes.regenerate"));
                   }}
                 >
@@ -165,7 +168,7 @@ export default function CourseEditorPage({ params }: { params: { id: string } })
             <p className="text-sm text-muted-foreground">{t("admin.records.subtitle")}</p>
           </CardHeader>
           <CardContent>
-            <RecordsManager courseId={params.id} />
+            <RecordsManager courseId={id} />
           </CardContent>
         </Card>
 

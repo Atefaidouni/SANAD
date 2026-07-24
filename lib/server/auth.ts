@@ -54,7 +54,8 @@ async function readToken(token?: string): Promise<string | null> {
 
 /** Current user's id from the session cookie (or null). */
 export async function getSessionUserId(): Promise<string | null> {
-  const token = cookies().get(SESSION_COOKIE)?.value;
+  const cookieStore: any = await cookies();
+  const token = cookieStore.get(SESSION_COOKIE)?.value;
   return readToken(token);
 }
 
@@ -62,10 +63,18 @@ export async function getSessionUserId(): Promise<string | null> {
 export async function getSessionUser(): Promise<User | null> {
   const id = await getSessionUserId();
   if (!id) return null;
-  const rows = await db
-    .select()
-    .from(schema.users)
-    .where(eq(schema.users.id, id))
-    .limit(1);
-  return rows[0] ? mapUser(rows[0]) : null;
+  try {
+    const rows = await db
+      .select()
+      .from(schema.users)
+      .where(eq(schema.users.id, id))
+      .limit(1);
+    return rows[0] ? mapUser(rows[0]) : null;
+  } catch (err) {
+    // DB driver (pglite) may abort in some local environments. Don't crash
+    // the whole request — log and return null so routes can fall back.
+    // eslint-disable-next-line no-console
+    console.error("DB read failed in getSessionUser:", err);
+    return null;
+  }
 }

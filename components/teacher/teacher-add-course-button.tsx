@@ -21,6 +21,8 @@ export function TeacherAddCourseButton({
   const [open, setOpen] = useState(false);
 
   if (!session) return null;
+  // Do not allow teachers to add courses — only admins may create courses.
+  if (session.user.role === "teacher") return null;
   const teacherName = `${session.user.firstName} ${session.user.lastName}`.trim();
 
   return (
