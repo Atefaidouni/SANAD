@@ -5,13 +5,14 @@ import { useRouter } from "next/navigation";
 import { BookOpen } from "lucide-react";
 import { DashboardShell } from "@/components/layout/dashboard-shell";
 import { CourseCard } from "@/components/shared/course-card";
+import { CourseGridSkeleton } from "@/components/shared/course-card-skeleton";
 import { SearchInput } from "@/components/shared/search-input";
 import { EmptyState } from "@/components/shared/empty-state";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useI18n } from "@/lib/i18n/provider";
-import { useSession, useStore } from "@/lib/mock/use-store";
+import { useHydrated, useSession, useStore } from "@/lib/mock/use-store";
 import type { Course } from "@/lib/types";
 
 type Tab = "active" | "saved";
@@ -20,6 +21,7 @@ export default function MyCoursesPage() {
   const { t, locale } = useI18n();
   const store = useStore();
   const session = useSession();
+  const hydrated = useHydrated();
   const router = useRouter();
   const userId = session?.user.id ?? "";
 
@@ -79,7 +81,9 @@ export default function MyCoursesPage() {
         </div>
 
         <TabsContent value={tab} className="mt-0">
-          {list.length === 0 ? (
+          {!hydrated ? (
+            <CourseGridSkeleton />
+          ) : list.length === 0 ? (
             <EmptyState
               icon={BookOpen}
               title={tab === "active" ? t("dashboard.noActive") : t("dashboard.noSaved")}

@@ -9,6 +9,7 @@
 import { relations } from "drizzle-orm";
 import {
   boolean,
+  customType,
   integer,
   jsonb,
   pgEnum,
@@ -17,6 +18,15 @@ import {
   timestamp,
   uuid,
 } from "drizzle-orm/pg-core";
+
+/** Raw bytes column — used to store uploaded image data directly in
+ *  Postgres so it works identically on Neon, cPanel Postgres, and local
+ *  PGlite, with no extra storage service. */
+const bytea = customType<{ data: Buffer; driverData: Buffer }>({
+  dataType() {
+    return "bytea";
+  },
+});
 
 export const roleEnum = pgEnum("role", ["student", "teacher", "admin"]);
 export const localeEnum = pgEnum("locale", ["en", "ar"]);
@@ -32,6 +42,12 @@ export const orderStatusEnum = pgEnum("order_status", [
   "delivered",
 ]);
 export const levelEnum = pgEnum("level", ["middle", "high", "exam"]);
+export const quizStatusEnum = pgEnum("quiz_status", ["draft", "published"]);
+export const quizQuestionTypeEnum = pgEnum("quiz_question_type", [
+  "single",
+  "multiple",
+  "true_false",
+]);
 
 export const users = pgTable("users", {
   id: uuid("id").defaultRandom().primaryKey(),
@@ -153,6 +169,82 @@ export const replies = pgTable("replies", {
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
+/** Generic uploaded-file store (bytes live in Postgres — no external storage
+ *  service). Currently only used for quiz question images. */
+export const uploads = pgTable("uploads", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  mime: text("mime").notNull(),
+  data: bytea("data").notNull(),
+  size: integer("size").notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const quizzes = pgTable("quizzes", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  courseId: uuid("course_id").notNull().references(() => courses.id),
+  title: text("title").notNull(),
+  titleAr: text("title_ar"),
+  description: text("description"),
+  descriptionAr: text("description_ar"),
+  timeLimitMin: integer("time_limit_min"), // null = untimed
+  passingScore: integer("passing_score").notNull().default(60), // percent
+  maxAttempts: integer("max_attempts"), // null = unlimited
+  availableFrom: timestamp("available_from"),
+  availableUntil: timestamp("available_until"),
+  shuffleQuestions: boolean("shuffle_questions").notNull().default(false),
+  shuffleAnswers: boolean("shuffle_answers").notNull().default(false),
+  showAnswersAfterSubmit: boolean("show_answers_after_submit").notNull().default(true),
+  showExplanationsAfterSubmit: boolean("show_explanations_after_submit").notNull().default(true),
+  status: quizStatusEnum("status").notNull().default("draft"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+export const quizQuestions = pgTable("quiz_questions", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  quizId: uuid("quiz_id").notNull().references(() => quizzes.id),
+  type: quizQuestionTypeEnum("type").notNull().default("single"),
+  text: text("text").notNull(),
+  textAr: text("text_ar"),
+  imageId: uuid("image_id").references(() => uploads.id),
+  points: integer("points").notNull().default(1),
+  order: integer("order").notNull().default(0),
+  explanation: text("explanation"),
+  explanationAr: text("explanation_ar"),
+});
+
+export const quizChoices = pgTable("quiz_choices", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  questionId: uuid("question_id").notNull().references(() => quizQuestions.id),
+  text: text("text").notNull(),
+  textAr: text("text_ar"),
+  isCorrect: boolean("is_correct").notNull().default(false),
+  order: integer("order").notNull().default(0),
+});
+
+export const quizAttempts = pgTable("quiz_attempts", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  quizId: uuid("quiz_id").notNull().references(() => quizzes.id),
+  userId: uuid("user_id").notNull().references(() => users.id),
+  attemptNumber: integer("attempt_number").notNull().default(1),
+  startedAt: timestamp("started_at").notNull().defaultNow(),
+  submittedAt: timestamp("submitted_at"), // null = in progress
+  score: integer("score"),
+  maxScore: integer("max_score").notNull().default(0),
+  percentage: integer("percentage"),
+  passed: boolean("passed"),
+  timeSpentSec: integer("time_spent_sec"),
+});
+
+export const quizAnswers = pgTable("quiz_answers", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  attemptId: uuid("attempt_id").notNull().references(() => quizAttempts.id),
+  questionId: uuid("question_id").notNull().references(() => quizQuestions.id),
+  selectedChoiceIds: jsonb("selected_choice_ids").$type<string[]>().default([]),
+  isCorrect: boolean("is_correct").notNull().default(false),
+  pointsEarned: integer("points_earned").notNull().default(0),
+});
+
 export const notifications = pgTable("notifications", {
   id: uuid("id").defaultRandom().primaryKey(),
   userId: uuid("user_id").notNull().references(() => users.id),
@@ -191,6 +283,34 @@ export const coursesRelations = relations(courses, ({ many }) => ({
   codes: many(courseCodes),
   enrollments: many(enrollments),
   questions: many(questions),
+  quizzes: many(quizzes),
+}));
+
+export const quizzesRelations = relations(quizzes, ({ one, many }) => ({
+  course: one(courses, { fields: [quizzes.courseId], references: [courses.id] }),
+  questions: many(quizQuestions),
+  attempts: many(quizAttempts),
+}));
+
+export const quizQuestionsRelations = relations(quizQuestions, ({ one, many }) => ({
+  quiz: one(quizzes, { fields: [quizQuestions.quizId], references: [quizzes.id] }),
+  image: one(uploads, { fields: [quizQuestions.imageId], references: [uploads.id] }),
+  choices: many(quizChoices),
+}));
+
+export const quizChoicesRelations = relations(quizChoices, ({ one }) => ({
+  question: one(quizQuestions, { fields: [quizChoices.questionId], references: [quizQuestions.id] }),
+}));
+
+export const quizAttemptsRelations = relations(quizAttempts, ({ one, many }) => ({
+  quiz: one(quizzes, { fields: [quizAttempts.quizId], references: [quizzes.id] }),
+  user: one(users, { fields: [quizAttempts.userId], references: [users.id] }),
+  answers: many(quizAnswers),
+}));
+
+export const quizAnswersRelations = relations(quizAnswers, ({ one }) => ({
+  attempt: one(quizAttempts, { fields: [quizAnswers.attemptId], references: [quizAttempts.id] }),
+  question: one(quizQuestions, { fields: [quizAnswers.questionId], references: [quizQuestions.id] }),
 }));
 
 export const courseCodesRelations = relations(courseCodes, ({ one }) => ({

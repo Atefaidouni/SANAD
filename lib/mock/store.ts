@@ -18,6 +18,13 @@ import type {
   Enrollment,
   Level,
   QuestionThread,
+  Quiz,
+  QuizAttempt,
+  QuizAttemptReview,
+  QuizAttemptSet,
+  QuizQuestion,
+  QuizQuestionInput,
+  QuizWithMeta,
   Review,
   Role,
   Session,
@@ -316,6 +323,110 @@ class SanadStore {
 
   removeLesson(lessonId: string): Result {
     return this.fire("removeLesson", { lessonId });
+  }
+
+  /* ----------------------------- quizzes -------------------------------- */
+
+  private withQuizMeta(q: Quiz): QuizWithMeta {
+    const questions = this.db.quizQuestions.filter((qq) => qq.quizId === q.id);
+    const myAttempts = this.session
+      ? this.db.quizAttempts.filter((a) => a.quizId === q.id && a.userId === this.session!.user.id)
+      : [];
+    return {
+      ...q,
+      questionCount: questions.length,
+      totalPoints: questions.reduce((s, x) => s + x.points, 0),
+      myAttempts,
+    };
+  }
+
+  getQuizzes(courseId: string): QuizWithMeta[] {
+    return this.db.quizzes
+      .filter((q) => q.courseId === courseId)
+      .map((q) => this.withQuizMeta(q))
+      .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+  }
+
+  getQuiz(id: string): QuizWithMeta | undefined {
+    const q = this.db.quizzes.find((x) => x.id === id);
+    return q ? this.withQuizMeta(q) : undefined;
+  }
+
+  /** Full question content (with choices) — only populated in the snapshot
+   *  for admin / the owning teacher; empty for students. */
+  getQuizQuestions(quizId: string): QuizQuestion[] {
+    return this.db.quizQuestions
+      .filter((q) => q.quizId === quizId)
+      .sort((a, b) => a.order - b.order);
+  }
+
+  getQuizAttempts(quizId: string): QuizAttempt[] {
+    return this.db.quizAttempts.filter((a) => a.quizId === quizId);
+  }
+
+  getQuizAnalytics(quizId: string) {
+    const attempts = this.getQuizAttempts(quizId).filter((a) => a.submittedAt);
+    const count = attempts.length;
+    const avgScore = count ? Math.round(attempts.reduce((s, a) => s + (a.percentage ?? 0), 0) / count) : 0;
+    const highScore = count ? Math.max(...attempts.map((a) => a.percentage ?? 0)) : 0;
+    const lowScore = count ? Math.min(...attempts.map((a) => a.percentage ?? 0)) : 0;
+    const passRate = count ? Math.round((attempts.filter((a) => a.passed).length / count) * 100) : 0;
+    return { attemptsCount: count, avgScore, highScore, lowScore, passRate };
+  }
+
+  async createQuiz(courseId: string, title: string): Promise<Result<{ quizId: string }>> {
+    return this.rpc<{ quizId: string }>("createQuiz", { courseId, title });
+  }
+
+  updateQuiz(id: string, patch: Partial<Quiz>): Result {
+    return this.fire("updateQuiz", { id, patch });
+  }
+
+  async deleteQuiz(id: string): Promise<Result> {
+    return this.rpc("deleteQuiz", { id });
+  }
+
+  async duplicateQuiz(id: string): Promise<Result<{ quizId: string }>> {
+    return this.rpc<{ quizId: string }>("duplicateQuiz", { id });
+  }
+
+  async addQuizQuestion(quizId: string, input: QuizQuestionInput): Promise<Result<{ id: string }>> {
+    return this.rpc<{ id: string }>("addQuizQuestion", { quizId, input });
+  }
+
+  async updateQuizQuestion(id: string, input: QuizQuestionInput): Promise<Result> {
+    return this.rpc("updateQuizQuestion", { id, input });
+  }
+
+  async removeQuizQuestion(id: string): Promise<Result> {
+    return this.rpc("removeQuizQuestion", { id });
+  }
+
+  async reorderQuizQuestions(quizId: string, orderedIds: string[]): Promise<Result> {
+    return this.rpc("reorderQuizQuestions", { quizId, orderedIds });
+  }
+
+  /** Starts (or resumes) an attempt. The question set arrives sanitized
+   *  (no correct answers) — those only ever come back via `submitQuizAttempt`. */
+  async startQuizAttempt(quizId: string): Promise<Result<QuizAttemptSet>> {
+    const res = await this.rpc<{ attempt: QuizAttempt; questions: QuizQuestion[] }>("startQuizAttempt", { quizId });
+    if (!res.ok || !res.data) return res as Result<QuizAttemptSet>;
+    const quiz = this.getQuiz(quizId);
+    if (!quiz) return { ok: false, error: "not_found" };
+    return { ok: true, data: { attempt: res.data.attempt, quiz, questions: res.data.questions } };
+  }
+
+  async submitQuizAttempt(
+    attemptId: string,
+    answers: { questionId: string; selectedChoiceIds: string[] }[]
+  ): Promise<Result<QuizAttemptReview>> {
+    return this.rpc<QuizAttemptReview>("submitQuizAttempt", { attemptId, answers });
+  }
+
+  /** Re-fetches the graded review for a past submitted attempt (not just
+   *  the instant it was submitted). */
+  async getQuizAttemptReview(attemptId: string): Promise<Result<QuizAttemptReview>> {
+    return this.rpc<QuizAttemptReview>("getQuizAttemptReview", { attemptId });
   }
 
   /* ----------------------------- teachers ------------------------------- */

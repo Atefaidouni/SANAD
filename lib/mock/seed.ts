@@ -15,6 +15,9 @@ import type {
   Notification,
   Otp,
   Question,
+  Quiz,
+  QuizAttempt,
+  QuizQuestion,
   Reply,
   Review,
   User,
@@ -32,6 +35,10 @@ export interface Database {
   notifications: Notification[];
   reviews: Review[];
   otps: Otp[];
+  quizzes: Quiz[];
+  /** Full question content (with choices) — only present for admin / the owning teacher. */
+  quizQuestions: QuizQuestion[];
+  quizAttempts: QuizAttempt[];
 }
 
 const createdAt = new Date("2026-01-01T09:00:00.000Z").toISOString();
@@ -167,5 +174,8 @@ export function createSeedData(): Database {
     notifications: [] as Notification[],
     reviews,
     otps: [] as Otp[],
+    quizzes: [] as Quiz[],
+    quizQuestions: [] as QuizQuestion[],
+    quizAttempts: [] as QuizAttempt[],
   });
 }

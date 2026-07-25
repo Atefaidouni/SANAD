@@ -5,11 +5,12 @@ import { useRouter } from "next/navigation";
 import { BookOpen } from "lucide-react";
 import { DashboardShell } from "@/components/layout/dashboard-shell";
 import { CourseCard } from "@/components/shared/course-card";
+import { CourseGridSkeleton } from "@/components/shared/course-card-skeleton";
 import { SearchInput } from "@/components/shared/search-input";
 import { EmptyState } from "@/components/shared/empty-state";
 import { Button } from "@/components/ui/button";
 import { useI18n } from "@/lib/i18n/provider";
-import { useSession, useStore } from "@/lib/mock/use-store";
+import { useHydrated, useSession, useStore } from "@/lib/mock/use-store";
 import { cn } from "@/lib/utils";
 import type { Course, Level } from "@/lib/types";
 
@@ -20,6 +21,7 @@ export default function BrowseCoursesPage() {
   const { t, locale } = useI18n();
   const store = useStore();
   const session = useSession();
+  const hydrated = useHydrated();
   const router = useRouter();
   const userId = session?.user.id ?? "";
 
@@ -71,7 +73,9 @@ export default function BrowseCoursesPage() {
           />
         </div>
 
-        {courses.length === 0 ? (
+        {!hydrated ? (
+          <CourseGridSkeleton />
+        ) : courses.length === 0 ? (
           <EmptyState icon={BookOpen} title={t("common.noResults")} />
         ) : (
           <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">

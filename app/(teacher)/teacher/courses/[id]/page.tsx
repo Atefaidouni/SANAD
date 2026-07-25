@@ -6,6 +6,7 @@ import { ArrowLeft, ExternalLink, Lock, Video } from "lucide-react";
 import { DashboardShell } from "@/components/layout/dashboard-shell";
 import { RecordsManager } from "@/components/course/records-manager";
 import { ForumSection } from "@/components/course/forum-section";
+import { TeacherQuizList } from "@/components/quiz/teacher-quiz-list";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useI18n } from "@/lib/i18n/provider";
@@ -84,6 +85,9 @@ export default function TeacherCoursePage() {
                 <RecordsManager courseId={id} readOnly />
               </CardContent>
             </Card>
+
+            {/* Quizzes — teacher builds/manages assessments for this course */}
+            <TeacherQuizList courseId={id} />
 
             {/* Forum — teacher replies to student questions */}
             <Card>

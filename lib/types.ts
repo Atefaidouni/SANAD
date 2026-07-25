@@ -14,6 +14,8 @@ export type OtpPurpose = "signup" | "reset" | "join";
 export type DeliveryType = "home" | "office" | "pickup";
 export type OrderStatus = "pending" | "confirmed" | "shipped" | "delivered";
 export type Level = "middle" | "high" | "exam";
+export type QuizStatus = "draft" | "published";
+export type QuizQuestionType = "single" | "multiple" | "true_false";
 
 export interface User {
   id: string;
@@ -127,6 +129,107 @@ export interface Reply {
   userId: string;
   body: string;
   createdAt: string;
+}
+
+export interface Quiz {
+  id: string;
+  courseId: string;
+  title: string;
+  titleAr?: string;
+  description?: string;
+  descriptionAr?: string;
+  timeLimitMin?: number | null;
+  passingScore: number;
+  maxAttempts?: number | null;
+  availableFrom?: string | null;
+  availableUntil?: string | null;
+  shuffleQuestions: boolean;
+  shuffleAnswers: boolean;
+  showAnswersAfterSubmit: boolean;
+  showExplanationsAfterSubmit: boolean;
+  status: QuizStatus;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface QuizChoice {
+  id: string;
+  questionId: string;
+  text: string;
+  textAr?: string;
+  /** Only present for admin / the owning teacher, or in a graded attempt result. */
+  isCorrect?: boolean;
+  order: number;
+}
+
+export interface QuizQuestion {
+  id: string;
+  quizId: string;
+  type: QuizQuestionType;
+  text: string;
+  textAr?: string;
+  imageId?: string | null;
+  points: number;
+  order: number;
+  /** Only present for admin / the owning teacher, or in a graded attempt result. */
+  explanation?: string | null;
+  explanationAr?: string | null;
+  choices: QuizChoice[];
+}
+
+export interface QuizAttempt {
+  id: string;
+  quizId: string;
+  userId: string;
+  attemptNumber: number;
+  startedAt: string;
+  submittedAt?: string | null;
+  score?: number | null;
+  maxScore: number;
+  percentage?: number | null;
+  passed?: boolean | null;
+  timeSpentSec?: number | null;
+}
+
+export interface QuizAnswer {
+  id: string;
+  attemptId: string;
+  questionId: string;
+  selectedChoiceIds: string[];
+  isCorrect: boolean;
+  pointsEarned: number;
+}
+
+/** Sanitized question set (no `isCorrect`/`explanation`) returned when a student starts an attempt. */
+export interface QuizAttemptSet {
+  attempt: QuizAttempt;
+  quiz: Quiz;
+  questions: QuizQuestion[];
+}
+
+/** Fully graded result — correct answers + explanations included — returned right after submit. */
+export interface QuizAttemptReview {
+  attempt: QuizAttempt;
+  answers: QuizAnswer[];
+  questions: QuizQuestion[]; // includes isCorrect/explanation
+}
+
+/** Shared shape for creating/editing a question — used by the store and the builder UI. */
+export interface QuizQuestionInput {
+  type: QuizQuestionType;
+  text: string;
+  textAr?: string;
+  imageId?: string | null;
+  points?: number;
+  explanation?: string;
+  explanationAr?: string;
+  choices: { text: string; textAr?: string; isCorrect: boolean }[];
+}
+
+export interface QuizWithMeta extends Quiz {
+  questionCount: number;
+  totalPoints: number;
+  myAttempts: QuizAttempt[];
 }
 
 export interface Notification {

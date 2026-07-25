@@ -21,6 +21,10 @@ import {
   mapOrder,
   mapPublicUser,
   mapQuestion,
+  mapQuiz,
+  mapQuizAnswer,
+  mapQuizAttempt,
+  mapQuizQuestion,
   mapReply,
   mapReview,
   mapUser,
@@ -30,6 +34,7 @@ import type { Database } from "@/lib/mock/seed";
 import type {
   DeliveryType,
   Level,
+  QuizQuestionType,
   Role,
   Session,
   User,
@@ -89,6 +94,10 @@ export async function buildSnapshot(current: User | null): Promise<Database> {
     replyRows,
     reviewRows,
     notificationRows,
+    quizRows,
+    quizQuestionRows,
+    quizChoiceRows,
+    quizAttemptRows,
   ] = await Promise.all([
     db.select().from(schema.users),
     db.select().from(schema.courses),
@@ -102,6 +111,10 @@ export async function buildSnapshot(current: User | null): Promise<Database> {
     current
       ? db.select().from(schema.notifications).where(eq(schema.notifications.userId, current.id))
       : Promise.resolve([] as (typeof schema.notifications.$inferSelect)[]),
+    db.select().from(schema.quizzes),
+    db.select().from(schema.quizQuestions),
+    db.select().from(schema.quizChoices),
+    db.select().from(schema.quizAttempts),
   ]);
 
   const isAdmin = current?.role === "admin";
@@ -180,6 +193,37 @@ export async function buildSnapshot(current: User | null): Promise<Database> {
   const reviews = reviewRows.map(mapReview);
   const notifications = notificationRows.map(mapNotification);
 
+  /* --- quizzes: admin all / teacher own-course / student published+enrolled --- */
+  const quizzes = quizRows
+    .filter((r) => {
+      if (isAdmin) return true;
+      if (isTeacher) return teacherCourseIds.has(r.courseId);
+      return r.status === "published" && myActiveCourseIds.has(r.courseId);
+    })
+    .map(mapQuiz);
+  const visibleQuizIds = new Set(quizzes.map((q) => q.id));
+
+  /* --- quiz question content: admin / owning teacher ONLY. Students never
+   *  get question content through the passive snapshot — only through the
+   *  sanitized `startQuizAttempt` result and the graded `submitQuizAttempt`
+   *  result, so a student can't just read the DB snapshot to see answers. --- */
+  const quizQuestions =
+    isAdmin || isTeacher
+      ? quizQuestionRows
+          .filter((r) => visibleQuizIds.has(r.quizId))
+          .sort((a, b) => a.order - b.order)
+          .map((r) => mapQuizQuestion(r, quizChoiceRows, /* redact */ false))
+      : [];
+
+  /* --- quiz attempts: admin all / teacher own-quizzes / student own --- */
+  const quizAttempts = quizAttemptRows
+    .filter((r) => {
+      if (isAdmin) return true;
+      if (isTeacher) return visibleQuizIds.has(r.quizId);
+      return current ? r.userId === current.id : false;
+    })
+    .map(mapQuizAttempt);
+
   return {
     users,
     courses,
@@ -192,6 +236,9 @@ export async function buildSnapshot(current: User | null): Promise<Database> {
     notifications,
     reviews,
     otps: [], // OTP rows are never exposed to the client.
+    quizzes,
+    quizQuestions,
+    quizAttempts,
   };
 }
 
@@ -305,6 +352,47 @@ async function generateCodes(courseId: string, count: number) {
   if (values.length) await db.insert(schema.courseCodes).values(values);
 }
 
+/** Cascades a full quiz deletion (choices → questions, answers → attempts → quiz). */
+async function deleteQuizForId(quizId: string) {
+  const qRows = await db.select({ id: schema.quizQuestions.id }).from(schema.quizQuestions).where(eq(schema.quizQuestions.quizId, quizId));
+  const questionIds = qRows.map((r) => r.id);
+  if (questionIds.length) {
+    await db.delete(schema.quizChoices).where(inArray(schema.quizChoices.questionId, questionIds));
+  }
+  const aRows = await db.select({ id: schema.quizAttempts.id }).from(schema.quizAttempts).where(eq(schema.quizAttempts.quizId, quizId));
+  const attemptIds = aRows.map((r) => r.id);
+  if (attemptIds.length) {
+    await db.delete(schema.quizAnswers).where(inArray(schema.quizAnswers.attemptId, attemptIds));
+  }
+  await db.delete(schema.quizQuestions).where(eq(schema.quizQuestions.quizId, quizId));
+  await db.delete(schema.quizAttempts).where(eq(schema.quizAttempts.quizId, quizId));
+  await db.delete(schema.quizzes).where(eq(schema.quizzes.id, quizId));
+}
+
+/** Cascades quiz deletion for every quiz belonging to the given courses (used when a course is deleted). */
+async function deleteQuizzesForCourses(courseIds: string[]) {
+  if (!courseIds.length) return;
+  const quizRows = await db.select({ id: schema.quizzes.id }).from(schema.quizzes).where(inArray(schema.quizzes.courseId, courseIds));
+  for (const q of quizRows) await deleteQuizForId(q.id);
+}
+
+/** Loads a quiz's courseId, throwing `not_found`/`forbidden` Results via the caller. */
+async function requireQuizOwner(current: User, quizId: string): Promise<{ courseId: string } | null> {
+  const rows = await db.select({ courseId: schema.quizzes.courseId }).from(schema.quizzes).where(eq(schema.quizzes.id, quizId)).limit(1);
+  if (!rows.length) return null;
+  if (!(await canManageCourse(current, rows[0].courseId))) throw new AuthError("forbidden");
+  return rows[0];
+}
+
+function shuffle<T>(arr: T[]): T[] {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
 const mutations = {
   async updateProfile(current: User | null, args: { patch: Partial<User> }): Promise<Result> {
     const u = requireAuth(current);
@@ -329,9 +417,13 @@ const mutations = {
   },
 
   async createCourse(current: User | null, args: { input: Record<string, unknown> }): Promise<Result<{ courseId: string }>> {
-    // Only admins may create courses. Teachers are not allowed to add courses.
+    // Admins may create a course for any teacher; an approved teacher may only
+    // create a course assigned to themselves (identity is never taken from the
+    // client — it's always pinned to the caller's own session).
     const actor = requireAuth(current);
-    requireAdmin(current);
+    if (actor.role !== "admin" && !(actor.role === "teacher" && actor.approved)) {
+      throw new AuthError("forbidden");
+    }
     const input = args.input as {
       title: string; titleAr?: string; subject: string; level: Level; division?: string;
       price: number; teacherName: string; teacherEmail?: string; zoomUrl?: string;
@@ -394,6 +486,7 @@ const mutations = {
       await db.delete(schema.replies).where(inArray(schema.replies.questionId, questionIds));
     }
     await db.delete(schema.questions).where(eq(schema.questions.courseId, courseId));
+    await deleteQuizzesForCourses([courseId]);
     await db.delete(schema.bookOrders).where(eq(schema.bookOrders.courseId, courseId));
     await db.delete(schema.enrollments).where(eq(schema.enrollments.courseId, courseId));
     await db.delete(schema.savedCourses).where(eq(schema.savedCourses.courseId, courseId));
@@ -479,6 +572,7 @@ const mutations = {
       const qIds = qRows.map((q) => q.id);
       if (qIds.length) await db.delete(schema.replies).where(inArray(schema.replies.questionId, qIds));
       await db.delete(schema.questions).where(inArray(schema.questions.courseId, courseIds));
+      await deleteQuizzesForCourses(courseIds);
       await db.delete(schema.bookOrders).where(inArray(schema.bookOrders.courseId, courseIds));
       await db.delete(schema.enrollments).where(inArray(schema.enrollments.courseId, courseIds));
       await db.delete(schema.courseCodes).where(inArray(schema.courseCodes.courseId, courseIds));
@@ -627,6 +721,321 @@ const mutations = {
     const u = requireAuth(current);
     await db.update(schema.notifications).set({ read: true }).where(eq(schema.notifications.userId, u.id));
     return ok();
+  },
+
+  /* ----------------------------- Quizzes ----------------------------- */
+
+  async createQuiz(current: User | null, args: { courseId: string; title: string }): Promise<Result<{ quizId: string }>> {
+    const u = requireAuth(current);
+    if (!(await canManageCourse(u, args.courseId))) return fail("forbidden");
+    const [row] = await db.insert(schema.quizzes).values({
+      courseId: args.courseId,
+      title: args.title,
+      status: "draft",
+    }).returning({ id: schema.quizzes.id });
+    return ok({ quizId: row.id });
+  },
+
+  async updateQuiz(current: User | null, args: { id: string; patch: Record<string, unknown> }): Promise<Result> {
+    const u = requireAuth(current);
+    const owner = await requireQuizOwner(u, args.id);
+    if (!owner) return fail("not_found");
+    const patch = { ...args.patch } as Record<string, unknown>;
+    delete patch.id;
+    delete patch.courseId;
+    delete patch.createdAt;
+    for (const k of ["availableFrom", "availableUntil"] as const) {
+      if (k in patch) {
+        const v = patch[k] as string | null | undefined;
+        patch[k] = v ? new Date(v) : null;
+      }
+    }
+    patch.updatedAt = new Date();
+    await db.update(schema.quizzes).set(patch).where(eq(schema.quizzes.id, args.id));
+    return ok();
+  },
+
+  async deleteQuiz(current: User | null, args: { id: string }): Promise<Result> {
+    const u = requireAuth(current);
+    const owner = await requireQuizOwner(u, args.id);
+    if (!owner) return fail("not_found");
+    await deleteQuizForId(args.id);
+    return ok();
+  },
+
+  async duplicateQuiz(current: User | null, args: { id: string }): Promise<Result<{ quizId: string }>> {
+    const u = requireAuth(current);
+    const owner = await requireQuizOwner(u, args.id);
+    if (!owner) return fail("not_found");
+    const [src] = await db.select().from(schema.quizzes).where(eq(schema.quizzes.id, args.id)).limit(1);
+    if (!src) return fail("not_found");
+
+    const [copy] = await db.insert(schema.quizzes).values({
+      courseId: src.courseId,
+      title: `${src.title} (copy)`,
+      titleAr: src.titleAr ? `${src.titleAr} (نسخة)` : src.titleAr,
+      description: src.description,
+      descriptionAr: src.descriptionAr,
+      timeLimitMin: src.timeLimitMin,
+      passingScore: src.passingScore,
+      maxAttempts: src.maxAttempts,
+      availableFrom: src.availableFrom,
+      availableUntil: src.availableUntil,
+      shuffleQuestions: src.shuffleQuestions,
+      shuffleAnswers: src.shuffleAnswers,
+      showAnswersAfterSubmit: src.showAnswersAfterSubmit,
+      showExplanationsAfterSubmit: src.showExplanationsAfterSubmit,
+      status: "draft",
+    }).returning({ id: schema.quizzes.id });
+
+    const questions = await db.select().from(schema.quizQuestions).where(eq(schema.quizQuestions.quizId, args.id));
+    for (const q of questions) {
+      const [newQ] = await db.insert(schema.quizQuestions).values({
+        quizId: copy.id,
+        type: q.type,
+        text: q.text,
+        textAr: q.textAr,
+        imageId: q.imageId,
+        points: q.points,
+        order: q.order,
+        explanation: q.explanation,
+        explanationAr: q.explanationAr,
+      }).returning({ id: schema.quizQuestions.id });
+      const choices = await db.select().from(schema.quizChoices).where(eq(schema.quizChoices.questionId, q.id));
+      if (choices.length) {
+        await db.insert(schema.quizChoices).values(
+          choices.map((c) => ({ questionId: newQ.id, text: c.text, textAr: c.textAr, isCorrect: c.isCorrect, order: c.order }))
+        );
+      }
+    }
+    return ok({ quizId: copy.id });
+  },
+
+  async addQuizQuestion(current: User | null, args: {
+    quizId: string;
+    input: {
+      type: QuizQuestionType; text: string; textAr?: string; imageId?: string | null;
+      points?: number; explanation?: string; explanationAr?: string;
+      choices: { text: string; textAr?: string; isCorrect: boolean }[];
+    };
+  }): Promise<Result<{ id: string }>> {
+    const u = requireAuth(current);
+    const owner = await requireQuizOwner(u, args.quizId);
+    if (!owner) return fail("not_found");
+    const existing = await db.select({ id: schema.quizQuestions.id }).from(schema.quizQuestions).where(eq(schema.quizQuestions.quizId, args.quizId));
+    const [row] = await db.insert(schema.quizQuestions).values({
+      quizId: args.quizId,
+      type: args.input.type,
+      text: args.input.text,
+      textAr: args.input.textAr,
+      imageId: args.input.imageId ?? null,
+      points: args.input.points ?? 1,
+      order: existing.length + 1,
+      explanation: args.input.explanation,
+      explanationAr: args.input.explanationAr,
+    }).returning({ id: schema.quizQuestions.id });
+    if (args.input.choices?.length) {
+      await db.insert(schema.quizChoices).values(
+        args.input.choices.map((c, i) => ({ questionId: row.id, text: c.text, textAr: c.textAr, isCorrect: !!c.isCorrect, order: i }))
+      );
+    }
+    return ok({ id: row.id });
+  },
+
+  async updateQuizQuestion(current: User | null, args: {
+    id: string;
+    input: {
+      type: QuizQuestionType; text: string; textAr?: string; imageId?: string | null;
+      points?: number; explanation?: string; explanationAr?: string;
+      choices: { text: string; textAr?: string; isCorrect: boolean }[];
+    };
+  }): Promise<Result> {
+    const u = requireAuth(current);
+    const rows = await db.select({ quizId: schema.quizQuestions.quizId }).from(schema.quizQuestions).where(eq(schema.quizQuestions.id, args.id)).limit(1);
+    if (!rows.length) return fail("not_found");
+    const owner = await requireQuizOwner(u, rows[0].quizId);
+    if (!owner) return fail("not_found");
+    await db.update(schema.quizQuestions).set({
+      type: args.input.type,
+      text: args.input.text,
+      textAr: args.input.textAr,
+      imageId: args.input.imageId ?? null,
+      points: args.input.points ?? 1,
+      explanation: args.input.explanation,
+      explanationAr: args.input.explanationAr,
+    }).where(eq(schema.quizQuestions.id, args.id));
+    await db.delete(schema.quizChoices).where(eq(schema.quizChoices.questionId, args.id));
+    if (args.input.choices?.length) {
+      await db.insert(schema.quizChoices).values(
+        args.input.choices.map((c, i) => ({ questionId: args.id, text: c.text, textAr: c.textAr, isCorrect: !!c.isCorrect, order: i }))
+      );
+    }
+    return ok();
+  },
+
+  async removeQuizQuestion(current: User | null, args: { id: string }): Promise<Result> {
+    const u = requireAuth(current);
+    const rows = await db.select({ quizId: schema.quizQuestions.quizId }).from(schema.quizQuestions).where(eq(schema.quizQuestions.id, args.id)).limit(1);
+    if (!rows.length) return fail("not_found");
+    const owner = await requireQuizOwner(u, rows[0].quizId);
+    if (!owner) return fail("not_found");
+    await db.delete(schema.quizChoices).where(eq(schema.quizChoices.questionId, args.id));
+    await db.delete(schema.quizQuestions).where(eq(schema.quizQuestions.id, args.id));
+    return ok();
+  },
+
+  async reorderQuizQuestions(current: User | null, args: { quizId: string; orderedIds: string[] }): Promise<Result> {
+    const u = requireAuth(current);
+    const owner = await requireQuizOwner(u, args.quizId);
+    if (!owner) return fail("not_found");
+    for (let i = 0; i < args.orderedIds.length; i++) {
+      await db.update(schema.quizQuestions)
+        .set({ order: i + 1 })
+        .where(and(eq(schema.quizQuestions.id, args.orderedIds[i]), eq(schema.quizQuestions.quizId, args.quizId)));
+    }
+    return ok();
+  },
+
+  /** Student starts (or resumes) an attempt. Returns the question set with
+   *  `isCorrect`/explanation stripped — the only other place that data
+   *  reaches the client is the graded result from `submitQuizAttempt`. */
+  async startQuizAttempt(current: User | null, args: { quizId: string }): Promise<Result<{ attempt: unknown; questions: unknown[] }>> {
+    const u = requireAuth(current);
+    const [quiz] = await db.select().from(schema.quizzes).where(eq(schema.quizzes.id, args.quizId)).limit(1);
+    if (!quiz) return fail("not_found");
+    if (quiz.status !== "published") return fail("quiz_not_published");
+
+    const enrollRows = await db.select({ status: schema.enrollments.status }).from(schema.enrollments)
+      .where(and(eq(schema.enrollments.userId, u.id), eq(schema.enrollments.courseId, quiz.courseId))).limit(1);
+    if (!enrollRows.length || enrollRows[0].status !== "active") return fail("not_enrolled");
+
+    const now = new Date();
+    if (quiz.availableFrom && now < quiz.availableFrom) return fail("quiz_not_available_yet");
+    if (quiz.availableUntil && now > quiz.availableUntil) return fail("quiz_expired");
+
+    const priorAttempts = await db.select().from(schema.quizAttempts)
+      .where(and(eq(schema.quizAttempts.quizId, args.quizId), eq(schema.quizAttempts.userId, u.id)));
+
+    let attemptRow = priorAttempts.find((a) => !a.submittedAt);
+    if (!attemptRow) {
+      const submittedCount = priorAttempts.filter((a) => a.submittedAt).length;
+      if (quiz.maxAttempts != null && submittedCount >= quiz.maxAttempts) return fail("no_attempts_left");
+
+      const questionRows = await db.select({ points: schema.quizQuestions.points }).from(schema.quizQuestions).where(eq(schema.quizQuestions.quizId, args.quizId));
+      const maxScore = questionRows.reduce((s, q) => s + q.points, 0);
+
+      const [row] = await db.insert(schema.quizAttempts).values({
+        quizId: args.quizId,
+        userId: u.id,
+        attemptNumber: submittedCount + 1,
+        maxScore,
+      }).returning();
+      attemptRow = row;
+    }
+
+    const questionRows = await db.select().from(schema.quizQuestions).where(eq(schema.quizQuestions.quizId, args.quizId));
+    const choiceRows = questionRows.length
+      ? await db.select().from(schema.quizChoices).where(inArray(schema.quizChoices.questionId, questionRows.map((q) => q.id)))
+      : [];
+
+    let orderedQuestions = [...questionRows].sort((a, b) => a.order - b.order);
+    if (quiz.shuffleQuestions) orderedQuestions = shuffle(orderedQuestions);
+
+    const questions = orderedQuestions.map((q) => {
+      const mapped = mapQuizQuestion(q, choiceRows, /* redact */ true);
+      if (quiz.shuffleAnswers) mapped.choices = shuffle(mapped.choices);
+      return mapped;
+    });
+
+    return ok({ attempt: mapQuizAttempt(attemptRow), questions });
+  },
+
+  /** Grades server-side — never trusts a client-supplied score. Returns the
+   *  full graded result (correct answers + explanations) for this attempt. */
+  async submitQuizAttempt(current: User | null, args: {
+    attemptId: string;
+    answers: { questionId: string; selectedChoiceIds: string[] }[];
+  }): Promise<Result<{ attempt: unknown; answers: unknown[]; questions: unknown[] }>> {
+    const u = requireAuth(current);
+    const [attempt] = await db.select().from(schema.quizAttempts).where(eq(schema.quizAttempts.id, args.attemptId)).limit(1);
+    if (!attempt) return fail("not_found");
+    if (attempt.userId !== u.id) return fail("forbidden");
+    if (attempt.submittedAt) return fail("already_submitted");
+
+    const questionRows = await db.select().from(schema.quizQuestions).where(eq(schema.quizQuestions.quizId, attempt.quizId));
+    const choiceRows = questionRows.length
+      ? await db.select().from(schema.quizChoices).where(inArray(schema.quizChoices.questionId, questionRows.map((q) => q.id)))
+      : [];
+
+    const answerByQuestion = new Map((args.answers ?? []).map((a) => [a.questionId, a.selectedChoiceIds ?? []]));
+
+    let totalScore = 0;
+    const answerRows = questionRows.map((q) => {
+      const correctIds = new Set(choiceRows.filter((c) => c.questionId === q.id && c.isCorrect).map((c) => c.id));
+      const selected = answerByQuestion.get(q.id) ?? [];
+      const selectedSet = new Set(selected);
+      const isCorrect = selectedSet.size === correctIds.size && [...correctIds].every((id) => selectedSet.has(id));
+      const pointsEarned = isCorrect ? q.points : 0;
+      totalScore += pointsEarned;
+      return { attemptId: attempt.id, questionId: q.id, selectedChoiceIds: selected, isCorrect, pointsEarned };
+    });
+
+    const insertedAnswers = answerRows.length ? await db.insert(schema.quizAnswers).values(answerRows).returning() : [];
+
+    const maxScore = attempt.maxScore || questionRows.reduce((s, q) => s + q.points, 0);
+    const percentage = maxScore > 0 ? Math.round((totalScore / maxScore) * 100) : 0;
+    const [quizRow] = await db.select({ passingScore: schema.quizzes.passingScore }).from(schema.quizzes).where(eq(schema.quizzes.id, attempt.quizId)).limit(1);
+    const passed = percentage >= (quizRow?.passingScore ?? 60);
+    const timeSpentSec = Math.max(0, Math.round((Date.now() - attempt.startedAt.getTime()) / 1000));
+
+    const [updated] = await db.update(schema.quizAttempts).set({
+      submittedAt: new Date(),
+      score: totalScore,
+      maxScore,
+      percentage,
+      passed,
+      timeSpentSec,
+    }).where(eq(schema.quizAttempts.id, attempt.id)).returning();
+
+    const questions = [...questionRows]
+      .sort((a, b) => a.order - b.order)
+      .map((q) => mapQuizQuestion(q, choiceRows, /* redact */ false));
+
+    return ok({
+      attempt: mapQuizAttempt(updated),
+      answers: insertedAnswers.map(mapQuizAnswer),
+      questions,
+    });
+  },
+
+  /** Re-fetches the graded review for a past *submitted* attempt (the owning
+   *  student, or the quiz's admin/owning teacher). Lets a student revisit an
+   *  old attempt's review, not just the instant they submitted it. */
+  async getQuizAttemptReview(current: User | null, args: { attemptId: string }): Promise<Result<{ attempt: unknown; answers: unknown[]; questions: unknown[] }>> {
+    const u = requireAuth(current);
+    const [attempt] = await db.select().from(schema.quizAttempts).where(eq(schema.quizAttempts.id, args.attemptId)).limit(1);
+    if (!attempt) return fail("not_found");
+    if (!attempt.submittedAt) return fail("not_submitted");
+
+    const isOwner = attempt.userId === u.id;
+    if (!isOwner) {
+      const [quiz] = await db.select({ courseId: schema.quizzes.courseId }).from(schema.quizzes).where(eq(schema.quizzes.id, attempt.quizId)).limit(1);
+      if (!quiz || !(await canManageCourse(u, quiz.courseId))) return fail("forbidden");
+    }
+
+    const questionRows = await db.select().from(schema.quizQuestions).where(eq(schema.quizQuestions.quizId, attempt.quizId));
+    const choiceRows = questionRows.length
+      ? await db.select().from(schema.quizChoices).where(inArray(schema.quizChoices.questionId, questionRows.map((q) => q.id)))
+      : [];
+    const answerRows = await db.select().from(schema.quizAnswers).where(eq(schema.quizAnswers.attemptId, attempt.id));
+
+    const questions = [...questionRows].sort((a, b) => a.order - b.order).map((q) => mapQuizQuestion(q, choiceRows, false));
+
+    return ok({
+      attempt: mapQuizAttempt(attempt),
+      answers: answerRows.map(mapQuizAnswer),
+      questions,
+    });
   },
 } as const;
 

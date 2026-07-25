@@ -13,6 +13,7 @@ import {
   Video,
 } from "lucide-react";
 import { ForumSection } from "./forum-section";
+import { StudentQuizList } from "@/components/quiz/student-quiz-list";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -96,6 +97,7 @@ export function CourseRecord({
       <Tabs defaultValue="records" className="space-y-5">
         <TabsList className="flex-wrap">
           <TabsTrigger value="records">{t("record.records")}</TabsTrigger>
+          <TabsTrigger value="quizzes">{t("quiz.student.tab")}</TabsTrigger>
           <TabsTrigger value="forum">{t("record.qa")}</TabsTrigger>
         </TabsList>
 
@@ -118,8 +120,8 @@ export function CourseRecord({
                     <li
                       key={lesson.id}
                       className={cn(
-                        "flex items-center gap-3 rounded-xl border p-3 transition-colors",
-                        done ? "border-secondary/30 bg-secondary/5" : "border-border"
+                        "flex items-center gap-3 rounded-xl border p-3 transition-all hover:shadow-soft",
+                        done ? "border-secondary/30 bg-secondary/5" : "border-border hover:border-primary/30"
                       )}
                     >
                       <PlayCircle className="size-5 shrink-0 text-primary" />
@@ -165,6 +167,11 @@ export function CourseRecord({
               </ul>
             </CardContent>
           </Card>
+        </TabsContent>
+
+        {/* Quizzes */}
+        <TabsContent value="quizzes">
+          <StudentQuizList courseId={course.id} />
         </TabsContent>
 
         {/* Q&A — ask the teacher */}

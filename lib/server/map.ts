@@ -12,6 +12,11 @@ import type {
   Lesson,
   Notification,
   Question,
+  Quiz,
+  QuizAnswer,
+  QuizAttempt,
+  QuizChoice,
+  QuizQuestion,
   Reply,
   Review,
   User,
@@ -27,6 +32,11 @@ type QuestionRow = typeof s.questions.$inferSelect;
 type ReplyRow = typeof s.replies.$inferSelect;
 type NotificationRow = typeof s.notifications.$inferSelect;
 type ReviewRow = typeof s.reviews.$inferSelect;
+type QuizRow = typeof s.quizzes.$inferSelect;
+type QuizQuestionRow = typeof s.quizQuestions.$inferSelect;
+type QuizChoiceRow = typeof s.quizChoices.$inferSelect;
+type QuizAttemptRow = typeof s.quizAttempts.$inferSelect;
+type QuizAnswerRow = typeof s.quizAnswers.$inferSelect;
 
 const iso = (d: Date | null | undefined) => (d ? d.toISOString() : undefined);
 
@@ -193,5 +203,91 @@ export function mapReview(r: ReviewRow): Review {
     body: r.body,
     bodyAr: r.bodyAr ?? undefined,
     createdAt: r.createdAt.toISOString(),
+  };
+}
+
+export function mapQuiz(r: QuizRow): Quiz {
+  return {
+    id: r.id,
+    courseId: r.courseId,
+    title: r.title,
+    titleAr: r.titleAr ?? undefined,
+    description: r.description ?? undefined,
+    descriptionAr: r.descriptionAr ?? undefined,
+    timeLimitMin: r.timeLimitMin,
+    passingScore: r.passingScore,
+    maxAttempts: r.maxAttempts,
+    availableFrom: iso(r.availableFrom) ?? null,
+    availableUntil: iso(r.availableUntil) ?? null,
+    shuffleQuestions: r.shuffleQuestions,
+    shuffleAnswers: r.shuffleAnswers,
+    showAnswersAfterSubmit: r.showAnswersAfterSubmit,
+    showExplanationsAfterSubmit: r.showExplanationsAfterSubmit,
+    status: r.status,
+    createdAt: r.createdAt.toISOString(),
+    updatedAt: r.updatedAt.toISOString(),
+  };
+}
+
+/** `redact = true` strips `isCorrect`/explanation — used when a student is
+ *  actively attempting a quiz (before grading). */
+export function mapQuizChoice(r: QuizChoiceRow, redact: boolean): QuizChoice {
+  return {
+    id: r.id,
+    questionId: r.questionId,
+    text: r.text,
+    textAr: r.textAr ?? undefined,
+    isCorrect: redact ? undefined : r.isCorrect,
+    order: r.order,
+  };
+}
+
+export function mapQuizQuestion(
+  r: QuizQuestionRow,
+  choiceRows: QuizChoiceRow[],
+  redact: boolean
+): QuizQuestion {
+  return {
+    id: r.id,
+    quizId: r.quizId,
+    type: r.type,
+    text: r.text,
+    textAr: r.textAr ?? undefined,
+    imageId: r.imageId,
+    points: r.points,
+    order: r.order,
+    explanation: redact ? undefined : r.explanation,
+    explanationAr: redact ? undefined : r.explanationAr,
+    choices: choiceRows
+      .filter((c) => c.questionId === r.id)
+      .sort((a, b) => a.order - b.order)
+      .map((c) => mapQuizChoice(c, redact)),
+  };
+}
+
+export function mapQuizAttempt(r: QuizAttemptRow): QuizAttempt {
+  return {
+    id: r.id,
+    quizId: r.quizId,
+    userId: r.userId,
+    attemptNumber: r.attemptNumber,
+    startedAt: r.startedAt.toISOString(),
+    submittedAt: iso(r.submittedAt) ?? null,
+    score: r.score,
+    maxScore: r.maxScore,
+    percentage: r.percentage,
+    passed: r.passed,
+    timeSpentSec: r.timeSpentSec,
+  };
+}
+
+export function mapQuizAnswer(r: QuizAnswerRow): QuizAnswer {
+  return {
+    id: r.id,
+    attemptId: r.attemptId,
+    questionId: r.questionId,
+    selectedChoiceIds: r.selectedChoiceIds ?? [],
+    isCorrect: r.isCorrect,
+    pointsEarned: r.pointsEarned,
   };
 }

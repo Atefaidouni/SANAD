@@ -122,12 +122,15 @@ export function CourseDetail({ course }: { course: CourseWithMeta }) {
           <Card>
             <CardContent className="p-6">
               <h2 className="mb-4 text-lg font-bold">{t("courses.curriculum")}</h2>
-              <ul className="divide-y divide-border">
+              <ul className="space-y-1.5">
                 {course.lessons.map((lesson, i) => {
                   const lTitle =
                     locale === "ar" && lesson.titleAr ? lesson.titleAr : lesson.title;
                   return (
-                    <li key={lesson.id} className="flex items-center gap-3 py-3">
+                    <li
+                      key={lesson.id}
+                      className="flex items-center gap-3 rounded-xl p-2.5 transition-colors hover:bg-accent/40"
+                    >
                       <span
                         className={cn(
                           "grid size-8 shrink-0 place-items-center rounded-lg text-xs font-bold",
@@ -139,14 +142,17 @@ export function CourseDetail({ course }: { course: CourseWithMeta }) {
                         {lesson.isPreview ? <PlayCircle className="size-4" /> : <Lock className="size-3.5" />}
                       </span>
                       <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm font-medium">{lTitle}</p>
+                        <p className="truncate text-sm font-medium">
+                          <span className="me-1.5 text-muted-foreground">{i + 1}.</span>
+                          {lTitle}
+                        </p>
                       </div>
                       {lesson.isPreview && (
                         <Badge variant="secondary" className="text-[10px]">
                           {t("courses.preview")}
                         </Badge>
                       )}
-                      <span className="text-xs text-muted-foreground">
+                      <span className="shrink-0 text-xs text-muted-foreground">
                         {lesson.durationMin}
                         {t("common.minutes")}
                       </span>
