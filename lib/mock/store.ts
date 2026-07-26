@@ -93,10 +93,21 @@ class SanadStore {
     try {
       const r = await fetch("/api/bootstrap", { cache: "no-store" });
       const json = (await r.json()) as ServerPayload;
-      if (json.snapshot) this.db = json.snapshot;
+      if (!r.ok || !json.snapshot) {
+        // The server couldn't be read (e.g. the database is down) — don't let
+        // this silently masquerade as "no courses/users exist yet". Keep
+        // whatever we already had in memory and surface the failure instead.
+        toast.error("Couldn't reach the server — showing the last known data. Please refresh in a moment.");
+        this.session = json.session ?? this.session;
+        this.hydrated = true;
+        this.commit();
+        return;
+      }
+      this.db = json.snapshot;
       this.session = json.session ?? null;
     } catch {
-      /* offline: keep the seed snapshot so the marketing page still renders */
+      toast.error("Couldn't reach the server — showing the last known data. Please refresh in a moment.");
+      /* offline/unreachable: keep whatever snapshot we already have so the app still renders */
     }
     this.hydrated = true;
     this.commit();

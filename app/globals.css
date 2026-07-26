@@ -95,9 +95,15 @@
     font-feature-settings: "rlig" 1, "calt" 1;
   }
 
+  /* Type system: Baloo 2 (+ Arabic counterpart) for headings, Inter for
+     everything else — applies everywhere without needing a class per heading. */
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-heading;
+  }
+
   /* Arabic typography: slightly larger line-height + dedicated font when RTL */
   [dir="rtl"] {
-    font-family: var(--font-arabic), var(--font-latin), system-ui, sans-serif;
+    font-family: var(--font-arabic), var(--font-body), system-ui, sans-serif;
   }
   [dir="rtl"] body,
   [dir="rtl"] p,

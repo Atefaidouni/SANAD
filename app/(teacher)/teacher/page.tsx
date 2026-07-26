@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowRight, BookOpen, GraduationCap, Users } from "lucide-react";
+import { ArrowRight, BookOpen } from "lucide-react";
 import { DashboardShell } from "@/components/layout/dashboard-shell";
 import { StatTile } from "@/components/dashboard/stat-tile";
 import { TeacherCourseCard } from "@/components/teacher/teacher-course-card";
@@ -18,11 +18,6 @@ export default function TeacherOverviewPage() {
   const email = session?.user.email ?? "";
 
   const myCourses = store.getCoursesByTeacherEmail(email);
-  const myStudents = myCourses.reduce(
-    (sum, c) => sum + store.getStudentRows(c.id).length,
-    0
-  );
-  const totalCourses = store.getCourses().length;
 
   return (
     <DashboardShell
@@ -32,10 +27,8 @@ export default function TeacherOverviewPage() {
       actions={<TeacherAddCourseButton />}
     >
       <div className="space-y-8">
-        <section className="grid grid-cols-2 gap-4 lg:grid-cols-3">
+        <section className="max-w-xs">
           <StatTile index={0} icon={BookOpen} label={t("teacher.myCourses")} value={myCourses.length} accent />
-          <StatTile index={1} icon={Users} label={t("admin.totalStudents")} value={myStudents} />
-          <StatTile index={2} icon={GraduationCap} label={t("teacher.allCourses")} value={totalCourses} />
         </section>
 
         <section>

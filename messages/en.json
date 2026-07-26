@@ -44,6 +44,7 @@
   "levels": {
     "middle": "Middle School",
     "high": "High School",
+    "university": "University",
     "exam": "Exam Prep",
     "all": "All levels"
   },
@@ -127,7 +128,7 @@
     "about": {
       "badge": "About Sanad",
       "title": "Learning support that follows every student",
-      "subtitle": "Sanad is a complete digital platform for Algerian middle and high school students. Structured content, live revision sessions, and continuous support until exam day.",
+      "subtitle": "Sanad is a complete digital platform for Algerian middle school, high school, and university students. Structured content, live revision sessions, and continuous support until exam day.",
       "point1": "Instantly join with the code inside your book",
       "point2": "Follow a personalized learning path with clear progress",
       "point3": "Attend live revision sessions over Zoom",
@@ -147,6 +148,8 @@
       "middleDesc": "Foundations and BEM preparation across all core subjects.",
       "highTitle": "High School",
       "highDesc": "Full program coverage with structured weekly revision.",
+      "universityTitle": "University",
+      "universityDesc": "First-year foundation modules and exam-focused tutoring for university students.",
       "examTitle": "Exam Prep",
       "examDesc": "Intensive BAC & BEM final revision with corrected past papers.",
       "cta": "Explore track"

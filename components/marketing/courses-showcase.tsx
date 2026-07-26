@@ -15,7 +15,7 @@ type ShowcaseItem = {
   titleAr: string;
   subject: string;
   subjectAr: string;
-  level: Level;
+  level: Level | "university";
   image: string;
 };
 
@@ -57,6 +57,15 @@ const ITEMS: ShowcaseItem[] = [
     image:
       "https://images.unsplash.com/photo-1513258496099-48168024aec0?auto=format&fit=crop&w=800&q=70",
   },
+  {
+    title: "University Foundations",
+    titleAr: "أساسيات السنة الجامعية الأولى",
+    subject: "Sciences",
+    subjectAr: "علوم",
+    level: "university",
+    image:
+      "https://images.unsplash.com/photo-1541339907198-e08756dedf3f?auto=format&fit=crop&w=800&q=70",
+  },
 ];
 
 export function CoursesShowcase() {
@@ -70,7 +79,7 @@ export function CoursesShowcase() {
         subtitle={t("marketing.showcase.subtitle")}
       />
 
-      <div className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-5">
         {ITEMS.map((item, i) => {
           const title = locale === "ar" ? item.titleAr : item.title;
           const subject = locale === "ar" ? item.subjectAr : item.subject;

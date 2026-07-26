@@ -919,7 +919,10 @@ const mutations = {
     let attemptRow = priorAttempts.find((a) => !a.submittedAt);
     if (!attemptRow) {
       const submittedCount = priorAttempts.filter((a) => a.submittedAt).length;
-      if (quiz.maxAttempts != null && submittedCount >= quiz.maxAttempts) return fail("no_attempts_left");
+      // Once a student has submitted an attempt, retaking is not allowed — only an
+      // unsubmitted (in-progress) attempt can be resumed. `maxAttempts` no longer
+      // grants extra retakes past the first submission.
+      if (submittedCount >= 1) return fail("no_attempts_left");
 
       const questionRows = await db.select({ points: schema.quizQuestions.points }).from(schema.quizQuestions).where(eq(schema.quizQuestions.quizId, args.quizId));
       const maxScore = questionRows.reduce((s, q) => s + q.points, 0);

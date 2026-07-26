@@ -29,8 +29,9 @@ export function StudentQuizList({ courseId }: { courseId: string }) {
           (acc, a) => (!acc || (a.percentage ?? 0) > (acc.percentage ?? 0) ? a : acc),
           undefined
         );
-        const attemptsLeft = q.maxAttempts != null ? Math.max(0, q.maxAttempts - submitted.length) : null;
-        const exhausted = attemptsLeft === 0 && !inProgress;
+        // Once an attempt is submitted, retaking is not allowed — only an
+        // unsubmitted (in-progress) attempt can be resumed.
+        const exhausted = submitted.length > 0 && !inProgress;
 
         const statusBadge = inProgress ? (
           <Badge variant="secondary">{t("quiz.status.inProgress")}</Badge>
@@ -63,9 +64,6 @@ export function StudentQuizList({ courseId }: { courseId: string }) {
                   </span>
                 ) : (
                   <span>{t("quiz.builder.untimed")}</span>
-                )}
-                {q.maxAttempts != null && (
-                  <span>{t("quiz.student.attemptsLeft", { count: attemptsLeft ?? 0 })}</span>
                 )}
               </div>
 

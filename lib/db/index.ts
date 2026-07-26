@@ -20,25 +20,37 @@ import * as schema from "./schema";
 
 type DB = NeonHttpDatabase<typeof schema>;
 
-let _db: DB | null = null;
-let _usingPglite = false;
+/**
+ * Cached on `globalThis` (not just a module-level variable) so that Next.js
+ * dev-mode recompiles/HMR of this module can't spin up a second PGlite client
+ * against the same `.pgdata` directory — two WASM instances writing to the
+ * same on-disk files concurrently is what corrupts it (surfaces later as a
+ * `RuntimeError: Aborted()` on every query, which looks like "data vanished"
+ * since the client silently falls back to an empty snapshot on a failed read).
+ */
+const globalForDb = globalThis as unknown as {
+  __sanadDb?: DB;
+  __sanadUsingPglite?: boolean;
+};
 
 function getDb(): DB {
-  if (_db) return _db;
+  if (globalForDb.__sanadDb) return globalForDb.__sanadDb;
   const url = process.env.DATABASE_URL;
+  let db: DB;
   if (url) {
     // Production path (Neon) — statically imported so it bundles cleanly.
-    _db = drizzleNeon(neon(url), { schema });
+    db = drizzleNeon(neon(url), { schema });
   } else {
     // Local dev fallback only — embedded Postgres, no cloud account needed.
     // (@electric-sql/pglite is a devDependency; not needed in production.)
     const { PGlite } = require("@electric-sql/pglite");
     const { drizzle: drizzlePglite } = require("drizzle-orm/pglite");
     const client = new PGlite(join(process.cwd(), ".pgdata"));
-    _db = drizzlePglite(client, { schema }) as unknown as DB;
-    _usingPglite = true;
+    db = drizzlePglite(client, { schema }) as unknown as DB;
+    globalForDb.__sanadUsingPglite = true;
   }
-  return _db!;
+  globalForDb.__sanadDb = db;
+  return db;
 }
 
 export const db = new Proxy({} as DB, {
@@ -55,7 +67,7 @@ export const db = new Proxy({} as DB, {
  */
 export async function ensureSchema(): Promise<void> {
   const real = getDb();
-  if (!_usingPglite) return;
+  if (!globalForDb.__sanadUsingPglite) return;
   const { migrate } = require("drizzle-orm/pglite/migrator");
   await migrate(real as never, { migrationsFolder: join(process.cwd(), "lib/db/migrations") });
 }

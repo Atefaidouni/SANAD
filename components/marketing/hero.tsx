@@ -5,7 +5,7 @@ import Image from "next/image";
 import { motion } from "framer-motion";
 import { CheckCircle2, Play, Sparkles, Users, Video } from "lucide-react";
 import { MarketingNav } from "./marketing-nav";
-import { Badge } from "@/components/ui/badge";
+import { Sheen } from "@/components/motion";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { useI18n } from "@/lib/i18n/provider";
@@ -97,6 +97,12 @@ export function Hero() {
               transition={{ duration: 0.6, delay: 0.15 }}
               className="relative mx-auto w-full max-w-lg"
             >
+              {/* Continuous gentle float — layered separately from the mount transition above. */}
+              <motion.div
+                animate={{ y: [0, -12, 0] }}
+                transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
+                className="relative"
+              >
               <div className="relative rounded-3xl border border-white/40 bg-white/70 p-4 shadow-2xl backdrop-blur-xl">
                 {/* Video / Session Box */}
                 <div className="relative aspect-[16/10] overflow-hidden rounded-2xl shadow-inner">
@@ -108,6 +114,7 @@ export function Hero() {
                     className="object-cover"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-emerald-950/60 via-emerald-950/10 to-transparent" />
+                  <Sheen duration={5} />
 
                   {/* Top overlays */}
                   <div className="absolute inset-x-3 top-3 flex items-center justify-between">
@@ -137,6 +144,24 @@ export function Hero() {
                   </div>
                 </div>
 
+                {/* Floating "progress saved" toast — pulled up over the image's
+                   bottom edge via negative margin, in normal flow so it can never
+                   collide with the session info/progress bar below it. */}
+                <motion.div
+                  initial={{ opacity: 0, y: 14, x: -8 }}
+                  animate={{ opacity: 1, y: 0, x: 0 }}
+                  transition={{ duration: 0.5, delay: 0.9, ease: [0.22, 1, 0.36, 1] }}
+                  className="relative z-10 -mt-7 ms-4 flex w-fit max-w-[15rem] items-center gap-3 rounded-2xl border border-white/60 bg-white/95 p-3 pe-5 shadow-xl backdrop-blur-xl"
+                >
+                  <span className="grid size-9 shrink-0 place-items-center rounded-full bg-emerald-100 text-emerald-600">
+                    <CheckCircle2 className="size-5" />
+                  </span>
+                  <div className="min-w-0">
+                    <p className="text-sm font-bold text-slate-900">{t("marketing.hero.toastTitle")}</p>
+                    <p className="truncate text-xs text-slate-500">{t("marketing.hero.toastBody")}</p>
+                  </div>
+                </motion.div>
+
                 {/* Session info */}
                 <div className="px-2 pb-1 pt-4">
                   <div className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-emerald-600">
@@ -157,21 +182,6 @@ export function Hero() {
                   </div>
                 </div>
               </div>
-
-              {/* Floating "progress saved" toast */}
-              <motion.div
-                initial={{ opacity: 0, y: 14, x: -8 }}
-                animate={{ opacity: 1, y: 0, x: 0 }}
-                transition={{ duration: 0.5, delay: 0.9, ease: [0.22, 1, 0.36, 1] }}
-                className="absolute -bottom-5 -start-5 flex max-w-[15rem] items-center gap-3 rounded-2xl border border-white/60 bg-white/95 p-3 pe-5 shadow-xl backdrop-blur-xl"
-              >
-                <span className="grid size-9 shrink-0 place-items-center rounded-full bg-emerald-100 text-emerald-600">
-                  <CheckCircle2 className="size-5" />
-                </span>
-                <div className="min-w-0">
-                  <p className="text-sm font-bold text-slate-900">{t("marketing.hero.toastTitle")}</p>
-                  <p className="truncate text-xs text-slate-500">{t("marketing.hero.toastBody")}</p>
-                </div>
               </motion.div>
             </motion.div>
           </div>

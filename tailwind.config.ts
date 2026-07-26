@@ -63,7 +63,11 @@ const config: Config = {
         sm: "calc(var(--radius) - 4px)",
       },
       fontFamily: {
-        sans: ["var(--font-latin)", "var(--font-arabic)", "system-ui", "sans-serif"],
+        // Body / UI text — Inter, with the Arabic display face as a fallback
+        // for Arabic glyphs (Inter itself ships no Arabic coverage).
+        sans: ["var(--font-body)", "var(--font-arabic)", "system-ui", "sans-serif"],
+        // Headings — Baloo 2, falling back to its Arabic counterpart per glyph.
+        heading: ["var(--font-latin)", "var(--font-arabic)", "system-ui", "sans-serif"],
         arabic: ["var(--font-arabic)", "sans-serif"],
       },
       backgroundImage: {

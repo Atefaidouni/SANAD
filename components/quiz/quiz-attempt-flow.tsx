@@ -34,8 +34,10 @@ export function QuizAttemptFlow({ courseId, quizId }: { courseId: string; quizId
     .filter((a) => a.submittedAt)
     .sort((a, b) => new Date(b.submittedAt!).getTime() - new Date(a.submittedAt!).getTime());
   const inProgressAttempt = quiz?.myAttempts.find((a) => !a.submittedAt);
-  const attemptsLeft = quiz?.maxAttempts != null ? Math.max(0, quiz.maxAttempts - submittedAttempts.length) : null;
-  const canStart = !!inProgressAttempt || attemptsLeft === null || (attemptsLeft ?? 0) > 0;
+  // Once an attempt is submitted, retaking is not allowed — only an unsubmitted
+  // (in-progress) attempt can be resumed.
+  const attemptsLeft = submittedAttempts.length > 0 ? 0 : 1;
+  const canStart = !!inProgressAttempt || submittedAttempts.length === 0;
 
   const onStart = async () => {
     setStarting(true);
@@ -323,11 +325,6 @@ export function QuizAttemptFlow({ courseId, quizId }: { courseId: string; quizId
           <Button asChild variant="outline">
             <Link href={`/courses/${courseId}`}>{t("quiz.attempt.backToCourse")}</Link>
           </Button>
-          {(attemptsLeft === null || attemptsLeft > 0) && (
-            <Button variant="brand" onClick={onStart} disabled={starting}>
-              {t("quiz.student.retake")}
-            </Button>
-          )}
         </div>
       </div>
     );

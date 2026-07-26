@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { ArrowLeft, GraduationCap, School, Sparkles } from "lucide-react";
+import { ArrowLeft, GraduationCap, Landmark, School, Sparkles } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useI18n } from "@/lib/i18n/provider";
@@ -12,10 +12,10 @@ export function Services() {
 
   const tracks = [
     {
-      icon: Sparkles,
-      title: t("marketing.services.examTitle"),
-      desc: t("marketing.services.examDesc"),
-      popular: true,
+      icon: School,
+      title: t("marketing.services.middleTitle"),
+      desc: t("marketing.services.middleDesc"),
+      popular: false,
     },
     {
       icon: GraduationCap,
@@ -24,10 +24,16 @@ export function Services() {
       popular: false,
     },
     {
-      icon: School,
-      title: t("marketing.services.middleTitle"),
-      desc: t("marketing.services.middleDesc"),
+      icon: Landmark,
+      title: t("marketing.services.universityTitle"),
+      desc: t("marketing.services.universityDesc"),
       popular: false,
+    },
+    {
+      icon: Sparkles,
+      title: t("marketing.services.examTitle"),
+      desc: t("marketing.services.examDesc"),
+      popular: true,
     },
   ];
 
@@ -45,7 +51,7 @@ export function Services() {
         </p>
       </div>
 
-      <div className="mt-12 grid gap-6 md:grid-cols-3 items-stretch">
+      <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-4 items-stretch">
         {tracks.map((track, i) => {
           const Icon = track.icon;
           return (
