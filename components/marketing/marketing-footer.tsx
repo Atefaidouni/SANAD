@@ -3,62 +3,65 @@
 import Link from "next/link";
 import { Logo } from "@/components/shared/logo";
 import { Mail, Phone } from "lucide-react";
+import { useI18n } from "@/lib/i18n/provider";
 
 export function MarketingFooter() {
+  const { t } = useI18n();
+
   return (
-    <footer className="mt-12 border-t border-slate-200/80 bg-white">
+    <footer className="mt-12 border-t border-border bg-muted/60">
       <div className="container py-12">
         <div className="grid gap-10 lg:grid-cols-[1.5fr_1fr_1fr]">
           <div className="space-y-4">
             <Logo size="md" />
-            <p className="max-w-xs text-sm leading-relaxed text-slate-600">
-              منصة تعليمية رقمية لطلاب المتوسط والثانوي في الجزائر.
+            <p className="max-w-xs text-sm leading-relaxed text-muted-foreground">
+              {t("marketing.footer.tagline")}
             </p>
           </div>
 
           <div className="space-y-3">
-            <p className="text-sm font-bold text-slate-900">روابط سريعة</p>
+            <p className="text-sm font-bold text-foreground">{t("marketing.footer.quickLinks")}</p>
             <ul className="space-y-2">
               <li>
-                <a href="#about" className="text-sm text-slate-600 transition-colors hover:text-slate-900">
-                  من نحن
+                <a href="#about" className="text-sm text-muted-foreground transition-colors hover:text-foreground">
+                  {t("nav.about")}
                 </a>
               </li>
               <li>
-                <a href="#services" className="text-sm text-slate-600 transition-colors hover:text-slate-900">
-                  الخدمات
+                <a href="#services" className="text-sm text-muted-foreground transition-colors hover:text-foreground">
+                  {t("nav.services")}
                 </a>
               </li>
               <li>
-                <a href="#feedback" className="text-sm text-slate-600 transition-colors hover:text-slate-900">
-                  آراء الطلاب
+                <a href="#feedback" className="text-sm text-muted-foreground transition-colors hover:text-foreground">
+                  {t("nav.feedback")}
                 </a>
               </li>
               <li>
-                <a href="#contact" className="text-sm text-slate-600 transition-colors hover:text-slate-900">
-                  تواصل
+                <a href="#contact" className="text-sm text-muted-foreground transition-colors hover:text-foreground">
+                  {t("nav.contact")}
                 </a>
               </li>
             </ul>
           </div>
 
           <div className="space-y-3">
-            <p className="text-sm font-bold text-slate-900">تواصل</p>
-            <ul className="space-y-2.5 text-sm text-slate-600">
+            <p className="text-sm font-bold text-foreground">{t("marketing.footer.contactTitle")}</p>
+            <ul className="space-y-2.5 text-sm text-muted-foreground">
               <li className="flex items-center gap-2">
-                <Mail className="size-4 text-emerald-600" />
+                <Mail className="size-4 text-emerald-600 dark:text-emerald-400" />
                 <span>Mafazacademy@gmail.com</span>
               </li>
               <li className="flex items-center gap-2">
-                <Phone className="size-4 text-emerald-600" />
+                <Phone className="size-4 text-emerald-600 dark:text-emerald-400" />
                 <span dir="ltr">+213 791 152 178</span>
               </li>
             </ul>
           </div>
         </div>
 
-        <div className="mt-10 border-t border-slate-100 pt-6 text-center text-xs text-slate-500">
-          © 2026 أكاديمية سند. جميع الحقوق محفوظة.
+        <div className="mt-10 border-t border-border pt-6 text-center text-xs text-muted-foreground">
+          {t("marketing.footer.rights")}
         </div>
       </div>
     </footer>

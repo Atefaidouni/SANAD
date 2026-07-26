@@ -19,6 +19,20 @@ const ADMINS = [
   { firstName: "Manager", lastName: "Two", email: "manager2@sanad.dz", password: "Sanad@2025" },
 ];
 
+/** Demo, pre-approved accounts so the other roles can be tried without signing up. */
+const DEMO_TEACHER = {
+  firstName: "Amine",
+  lastName: "Belkacem",
+  email: "teacher@sanad.dz",
+  password: "Sanad@2025",
+};
+const DEMO_STUDENT = {
+  firstName: "Yacine",
+  lastName: "Haddad",
+  email: "student@sanad.dz",
+  password: "Sanad@2025",
+};
+
 async function main() {
   // Imported dynamically so dotenv runs before lib/db/index reads DATABASE_URL.
   const { db, schema, ensureSchema } = await import("./index");
@@ -49,6 +63,47 @@ async function main() {
       });
     console.log(`  ✓ ${a.email}`);
   }
+
+  console.log("Seeding demo teacher & student…");
+  const demoTeacherHash = await bcrypt.hash(DEMO_TEACHER.password, 10);
+  await db
+    .insert(schema.users)
+    .values({
+      firstName: DEMO_TEACHER.firstName,
+      lastName: DEMO_TEACHER.lastName,
+      email: DEMO_TEACHER.email,
+      passwordHash: demoTeacherHash,
+      role: "teacher",
+      isVerified: true,
+      approved: true,
+      locale: "ar",
+      theme: "dark",
+    })
+    .onConflictDoUpdate({
+      target: schema.users.email,
+      set: { passwordHash: demoTeacherHash, role: "teacher", isVerified: true, approved: true },
+    });
+  console.log(`  ✓ ${DEMO_TEACHER.email}`);
+
+  const demoStudentHash = await bcrypt.hash(DEMO_STUDENT.password, 10);
+  await db
+    .insert(schema.users)
+    .values({
+      firstName: DEMO_STUDENT.firstName,
+      lastName: DEMO_STUDENT.lastName,
+      email: DEMO_STUDENT.email,
+      passwordHash: demoStudentHash,
+      role: "student",
+      isVerified: true,
+      approved: true,
+      locale: "ar",
+      theme: "dark",
+    })
+    .onConflictDoUpdate({
+      target: schema.users.email,
+      set: { passwordHash: demoStudentHash, role: "student", isVerified: true, approved: true },
+    });
+  console.log(`  ✓ ${DEMO_STUDENT.email}`);
 
   const existingReviews = await db.select({ id: schema.reviews.id }).from(schema.reviews).limit(1);
   if (existingReviews.length === 0) {

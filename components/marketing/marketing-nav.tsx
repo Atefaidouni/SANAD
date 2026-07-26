@@ -139,7 +139,7 @@ export function MarketingNav() {
                   <Button
                     asChild
                     variant="outline"
-                    className="flex-1 rounded-full border-slate-200 bg-white text-slate-800 hover:bg-slate-50"
+                    className="flex-1 rounded-full border-slate-200 bg-white text-slate-800 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:hover:bg-slate-700"
                   >
                     <Link href="/login">{t("nav.login")}</Link>
                   </Button>

@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import Link from "next/link";
 import { CheckCircle2, Home, RotateCw } from "lucide-react";
-import { SanadLogo } from "@/components/shared/sanad-logo";
+import { Logo } from "@/components/shared/logo";
 import { LanguageSwitcher } from "@/components/shared/language-switcher";
 import { ThemeToggle } from "@/components/shared/theme-toggle";
 import { AmbientBackground } from "@/components/motion";
@@ -46,8 +46,8 @@ export function AuthShell({
         transition={{ duration: 0.4 }}
         className="grid w-full max-w-5xl overflow-hidden rounded-[2rem] border border-border bg-card shadow-2xl lg:grid-cols-2"
       >
-        {/* Brand panel */}
-        <aside className="relative hidden flex-col justify-between overflow-hidden bg-brand-gradient p-8 text-white lg:flex">
+        {/* Brand panel — same gradient as the homepage hero banner */}
+        <aside className="relative hidden flex-col justify-between overflow-hidden bg-hero-gradient p-8 text-white lg:flex">
           <div
             aria-hidden
             className="absolute inset-0 opacity-[0.15]"
@@ -88,18 +88,14 @@ export function AuthShell({
           </div>
 
           <div className="relative flex justify-center pt-6">
-            <Link href="/" aria-label="Sanad">
-              <SanadLogo tone="white" className="h-14" />
-            </Link>
+            <Logo size="lg" className="scale-125" />
           </div>
         </aside>
 
         {/* Form side */}
         <main className="flex flex-col justify-center p-6 sm:p-10 lg:p-12">
           <div className="mb-6 flex justify-center lg:hidden">
-            <Link href="/" aria-label="Sanad" className="text-foreground">
-              <SanadLogo className="h-14" />
-            </Link>
+            <Logo size="lg" className="scale-125" />
           </div>
           <div className="mx-auto w-full max-w-sm">{children}</div>
         </main>

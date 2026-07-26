@@ -114,7 +114,9 @@
       "liveCardTeacher": "with Amine Belkacem",
       "liveCardStatus": "Live now",
       "toastTitle": "Progress saved",
-      "toastBody": "You completed “Derivatives” — 50% done"
+      "toastBody": "You completed “Derivatives” — 50% done",
+      "progressTitle": "Progress tracking",
+      "progressSubtitle": "Hands-on practice with weekly improvement reports"
     },
     "stats": {
       "students": "Students",
@@ -130,7 +132,11 @@
       "point2": "Follow a personalized learning path with clear progress",
       "point3": "Attend live revision sessions over Zoom",
       "point4": "Ask teachers questions and get quick answers",
-      "imageAlt": "Students celebrating their success"
+      "imageAlt": "Students celebrating their success",
+      "journeyTitle": "Student journey",
+      "journeyStep1": "Review today's lesson",
+      "journeyStep2": "Finish a practice set",
+      "journeyStep3": "Collect your achievement"
     },
     "services": {
       "badge": "Services",
@@ -148,7 +154,19 @@
     "feedback": {
       "badge": "Feedback",
       "title": "Students feel more confident after every lesson",
-      "subtitle": "Real progress from clear lessons, interactive questions, and continuous performance tracking."
+      "subtitle": "Real progress from clear lessons, interactive questions, and continuous performance tracking.",
+      "review1Name": "Lina M.",
+      "review1Role": "Middle school student",
+      "review1Body": "Sanad helped me organize my whole study week. The live sessions make it easy to ask questions the moment I get stuck.",
+      "review2Name": "Ahmed K.",
+      "review2Role": "High school student",
+      "review2Body": "The lessons are clear and structured. I finally understand topics I used to struggle with for months.",
+      "review3Name": "Meriem B.",
+      "review3Role": "Middle school student",
+      "review3Body": "I love tracking my progress after every quiz — it keeps me motivated to keep going every week.",
+      "review4Name": "Yacine T.",
+      "review4Role": "Baccalaureate candidate",
+      "review4Body": "Between the recorded lessons and live revision, I feel genuinely ready for the BAC this year."
     },
     "showcase": {
       "badge": "Courses",
@@ -172,12 +190,15 @@
       "success": "Thanks! Your message has been sent."
     },
     "cta": {
+      "badge": "Start learning today",
       "title": "Ready to build a stronger study routine?",
       "subtitle": "Browse available courses, choose your plan, and start a path that matches your level.",
       "secondaryButton": "Contact us"
     },
     "footer": {
       "tagline": "The learning platform that follows every Algerian student to exam day.",
+      "quickLinks": "Quick links",
+      "contactTitle": "Contact",
       "product": "Product",
       "company": "Company",
       "legal": "Legal",

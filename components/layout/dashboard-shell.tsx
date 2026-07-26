@@ -106,8 +106,8 @@ export function DashboardShell({
 
   const renderSidebar = (scope: "desktop" | "mobile") => (
     <div className="flex h-full flex-col gap-2 p-4">
-      <div className="flex items-center justify-between px-2 py-2">
-        <Logo onBrand />
+      <div className="flex items-center justify-between px-2 py-2 lg:justify-center">
+        <Logo />
         <button
           className="text-white/80 hover:text-white lg:hidden"
           onClick={() => setMobileOpen(false)}
