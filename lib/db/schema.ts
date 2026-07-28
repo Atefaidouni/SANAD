@@ -1,15 +1,15 @@
 /**
  * Sanad Academy — Drizzle schema (source of truth for the data model).
  *
- * NOTE (mock-first): The app currently reads/writes through an in-memory store
- * (`lib/mock/store.ts`) that implements the SAME row shapes inferred from these
- * tables. To go live, wire a Postgres driver to `db` and replace the store's
- * functions with Drizzle queries — the types below already match.
+ * The client-side store (`lib/mock/store.ts`) mirrors these row shapes for its
+ * cache, but reads/writes for real go through Drizzle queries in
+ * `lib/server/dal.ts` against this schema (Neon in production, PGlite locally).
  */
 import { relations } from "drizzle-orm";
 import {
   boolean,
   customType,
+  index,
   integer,
   jsonb,
   pgEnum,
@@ -128,7 +128,11 @@ export const enrollments = pgTable("enrollments", {
   progressPercent: integer("progress_percent").notNull().default(0),
   completedLessonIds: jsonb("completed_lesson_ids").$type<string[]>().default([]),
   createdAt: timestamp("created_at").notNull().defaultNow(),
-});
+}, (table) => [
+  // Every enrollment lookup filters by this pair (join-course, complete-lesson,
+  // save-course, start-quiz, ...) — without it, each is a full table scan.
+  index("enrollments_user_course_idx").on(table.userId, table.courseId),
+]);
 
 export const savedCourses = pgTable("saved_courses", {
   id: uuid("id").defaultRandom().primaryKey(),
@@ -159,7 +163,9 @@ export const questions = pgTable("questions", {
   body: text("body").notNull(),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   resolved: boolean("resolved").notNull().default(false),
-});
+}, (table) => [
+  index("questions_course_idx").on(table.courseId),
+]);
 
 export const replies = pgTable("replies", {
   id: uuid("id").defaultRandom().primaryKey(),
@@ -234,7 +240,9 @@ export const quizAttempts = pgTable("quiz_attempts", {
   percentage: integer("percentage"),
   passed: boolean("passed"),
   timeSpentSec: integer("time_spent_sec"),
-});
+}, (table) => [
+  index("quiz_attempts_quiz_user_idx").on(table.quizId, table.userId),
+]);
 
 export const quizAnswers = pgTable("quiz_answers", {
   id: uuid("id").defaultRandom().primaryKey(),
@@ -274,7 +282,12 @@ export const otps = pgTable("otps", {
   purpose: otpPurposeEnum("purpose").notNull(),
   expiresAt: timestamp("expires_at").notNull(),
   used: boolean("used").notNull().default(false),
-});
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+}, (table) => [
+  index("otps_email_purpose_idx").on(table.email, table.purpose),
+  // Token redemption looks up by code alone.
+  index("otps_code_idx").on(table.code),
+]);
 
 /* ----------------------------- Relations ----------------------------- */
 

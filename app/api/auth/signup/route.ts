@@ -14,6 +14,11 @@ export async function POST(req: Request) {
   if ([firstName, lastName, email, password].some((v) => typeof v !== "string" || !v)) {
     return NextResponse.json({ ok: false, error: "invalid_input" }, { status: 400 });
   }
+  // Client already enforces this (zod, min 8) — re-checked here since the
+  // client-side rule is trivially bypassed by calling the API directly.
+  if (password.length < 8) {
+    return NextResponse.json({ ok: false, error: "password_weak" }, { status: 400 });
+  }
   // Only student/teacher may self-register; never admin.
   const safeRole: Role | undefined = role === "teacher" ? "teacher" : "student";
 

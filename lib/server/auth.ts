@@ -14,9 +14,24 @@ import type { User } from "@/lib/types";
 export const SESSION_COOKIE = "mafaz_session";
 const MAX_AGE = 60 * 60 * 24 * 30; // 30 days
 
-const secret = new TextEncoder().encode(
-  process.env.SESSION_SECRET || "dev-insecure-secret-change-me"
-);
+// Computed lazily (not at module load) so `next build` — which imports every
+// route module to collect page data, even under NODE_ENV=production — never
+// trips this. It only actually runs when a request needs to sign/verify a
+// token, i.e. once the app is really serving traffic.
+let cachedSecret: Uint8Array | null = null;
+function getSecret(): Uint8Array {
+  if (cachedSecret) return cachedSecret;
+  if (process.env.NODE_ENV === "production" && !process.env.SESSION_SECRET) {
+    // A guessable/default secret would let anyone forge a valid session cookie
+    // for any user id — fail loudly rather than silently running insecure.
+    throw new Error(
+      "SESSION_SECRET is not set. Refusing to run in production with an insecure default — " +
+        "generate one with: node -e \"console.log(require('crypto').randomBytes(32).toString('hex'))\""
+    );
+  }
+  cachedSecret = new TextEncoder().encode(process.env.SESSION_SECRET || "dev-insecure-secret-change-me");
+  return cachedSecret;
+}
 
 export const sessionCookieOptions = {
   httpOnly: true,
@@ -39,13 +54,13 @@ export async function createSessionToken(userId: string): Promise<string> {
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
     .setExpirationTime("30d")
-    .sign(secret);
+    .sign(getSecret());
 }
 
 async function readToken(token?: string): Promise<string | null> {
   if (!token) return null;
   try {
-    const { payload } = await jwtVerify(token, secret);
+    const { payload } = await jwtVerify(token, getSecret());
     return (payload.uid as string) ?? null;
   } catch {
     return null;

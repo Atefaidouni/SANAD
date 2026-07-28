@@ -203,9 +203,21 @@ class SanadStore {
     }
   }
 
-  async resetPassword(email: string, newPassword: string): Promise<Result> {
+  /** Step 1: request an emailed reset link. Always resolves ok — the server
+   *  never reveals whether the email is registered. */
+  async requestPasswordReset(email: string): Promise<Result> {
     try {
-      const json = await this.post("/api/auth/reset", { email, newPassword });
+      const json = await this.post("/api/auth/reset", { email });
+      return { ok: !!json.ok, error: json.error };
+    } catch {
+      return { ok: false, error: "network_error" };
+    }
+  }
+
+  /** Step 2: redeem the token from the emailed link for a new password. */
+  async confirmPasswordReset(token: string, newPassword: string): Promise<Result> {
+    try {
+      const json = await this.post("/api/auth/reset/confirm", { token, newPassword });
       return { ok: !!json.ok, error: json.error };
     } catch {
       return { ok: false, error: "network_error" };

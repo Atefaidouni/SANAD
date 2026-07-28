@@ -1,5 +1,5 @@
 {
-  "name": "mafaz-academy",
+  "name": "sanad-academy",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "next lint",
     "deploy:cpanel": "next build && node scripts/pack-cpanel.mjs",
+    "db:generate": "drizzle-kit generate",
     "db:push": "drizzle-kit push",
     "db:seed": "tsx lib/db/seed.ts",
     "db:studio": "drizzle-kit studio"

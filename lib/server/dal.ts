@@ -9,7 +9,8 @@
  *   can call them by name through `/api/rpc`.
  */
 import "server-only";
-import { and, eq, inArray } from "drizzle-orm";
+import { randomBytes } from "crypto";
+import { and, eq, gte, inArray } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
 import { hashPassword, verifyPassword } from "./auth";
 import {
@@ -187,9 +188,19 @@ export async function buildSnapshot(current: User | null): Promise<Database> {
     .filter((r) => (isAdmin ? true : current ? r.userId === current.id : false))
     .map(mapOrder);
 
-  // Forum is shared per course; reviews are public; notifications already scoped.
-  const questions = questionRows.map(mapQuestion);
-  const replies = replyRows.map(mapReply);
+  /* --- forum: admin all / teacher own-course / student own-enrolled-course.
+   *  Shared *within* a course, but must not leak across courses the caller
+   *  has no relationship to — same rule as enrollments/quizzes above. --- */
+  const questions = questionRows
+    .filter((r) => {
+      if (isAdmin) return true;
+      if (isTeacher) return teacherCourseIds.has(r.courseId);
+      return myActiveCourseIds.has(r.courseId);
+    })
+    .map(mapQuestion);
+  const visibleQuestionIds = new Set(questions.map((q) => q.id));
+  const replies = replyRows.filter((r) => visibleQuestionIds.has(r.questionId)).map(mapReply);
+  // Reviews are public marketing testimonials by design; notifications are already user-scoped.
   const reviews = reviewRows.map(mapReview);
   const notifications = notificationRows.map(mapNotification);
 
@@ -300,11 +311,49 @@ export async function authenticate(email: string, password: string): Promise<Res
   }
 }
 
-export async function resetUserPassword(email: string, newPassword: string): Promise<Result> {
-  const rows = await db.select({ id: schema.users.id }).from(schema.users).where(eq(schema.users.email, email.trim().toLowerCase())).limit(1);
-  if (!rows.length) return fail("user_not_found");
+const RESET_TOKEN_TTL_MS = 30 * 60 * 1000; // 30 minutes
+const RESET_RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000;
+const RESET_RATE_LIMIT_MAX = 3; // max outstanding reset requests per email per window
+
+/**
+ * Step 1 of password reset: if the email belongs to an account (and isn't
+ * rate-limited), mint a one-time token and return it for the caller to email.
+ * Returns null in every "don't proceed" case (no account / rate-limited) so
+ * the API layer can respond identically either way — never reveal which.
+ */
+export async function requestPasswordReset(email: string): Promise<{ token: string } | null> {
+  const normalized = email.trim().toLowerCase();
+  const userRows = await db.select({ id: schema.users.id }).from(schema.users).where(eq(schema.users.email, normalized)).limit(1);
+  const user = userRows[0];
+  if (!user) return null;
+
+  const since = new Date(Date.now() - RESET_RATE_LIMIT_WINDOW_MS);
+  const recent = await db.select({ id: schema.otps.id }).from(schema.otps)
+    .where(and(eq(schema.otps.email, normalized), eq(schema.otps.purpose, "reset"), gte(schema.otps.createdAt, since)));
+  if (recent.length >= RESET_RATE_LIMIT_MAX) return null;
+
+  const token = randomBytes(32).toString("base64url");
+  await db.insert(schema.otps).values({
+    userId: user.id,
+    email: normalized,
+    code: token,
+    purpose: "reset",
+    expiresAt: new Date(Date.now() + RESET_TOKEN_TTL_MS),
+  });
+  return { token };
+}
+
+/** Step 2: redeem a single-use, time-limited token minted by requestPasswordReset. */
+export async function confirmPasswordReset(token: string, newPassword: string): Promise<Result> {
+  const rows = await db.select().from(schema.otps)
+    .where(and(eq(schema.otps.code, token), eq(schema.otps.purpose, "reset"))).limit(1);
+  const row = rows[0];
+  if (!row || row.used || row.expiresAt.getTime() < Date.now() || !row.userId) {
+    return fail("invalid_or_expired_token");
+  }
   const passwordHash = await hashPassword(newPassword);
-  await db.update(schema.users).set({ passwordHash }).where(eq(schema.users.id, rows[0].id));
+  await db.update(schema.users).set({ passwordHash }).where(eq(schema.users.id, row.userId));
+  await db.update(schema.otps).set({ used: true }).where(eq(schema.otps.id, row.id));
   return ok();
 }
 

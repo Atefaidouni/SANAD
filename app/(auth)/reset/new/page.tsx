@@ -34,7 +34,7 @@ export default function NewPasswordPage() {
   const store = useStore();
   const params = useQueryParams();
   const [mounted, setMounted] = useState(false);
-  const email = params.get("email") ?? "";
+  const token = params.get("token") ?? "";
 
   useEffect(() => setMounted(true), []);
 
@@ -47,7 +47,7 @@ export default function NewPasswordPage() {
   const password = watch("password") ?? "";
 
   const onSubmit = async (values: Values) => {
-    const res = await store.resetPassword(email, values.password);
+    const res = await store.confirmPasswordReset(token, values.password);
     if (!res.ok) {
       toast.error(t(`auth.errors.${res.error}` as const));
       return;
@@ -82,7 +82,7 @@ export default function NewPasswordPage() {
           variant="brand"
           size="lg"
           className="w-full"
-          disabled={isSubmitting || !mounted || !email}
+          disabled={isSubmitting || !mounted || !token}
         >
           {t("auth.setPasswordCta")}
         </Button>
