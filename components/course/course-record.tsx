@@ -141,12 +141,7 @@ export function CourseRecord({
                           variant="brand"
                           className="shrink-0 gap-1.5"
                         >
-                          <a
-                            href={lesson.videoUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            onClick={() => store.completeLesson(userId, course.id, lesson.id)}
-                          >
+                          <a href={lesson.videoUrl} target="_blank" rel="noopener noreferrer">
                             <PlayCircle className="size-4" />
                             {t("record.watch")}
                           </a>

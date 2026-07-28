@@ -107,7 +107,7 @@ export function Hero() {
                 {/* Video / Session Box */}
                 <div className="relative aspect-[16/10] overflow-hidden rounded-2xl shadow-inner">
                   <Image
-                    src="https://images.unsplash.com/photo-1509228468518-180dd4864904?auto=format&fit=crop&w=900&q=70"
+                    src="https://images.unsplash.com/photo-1518133910546-b6c2fb7d79e3?auto=format&fit=crop&w=900&q=70"
                     alt={t("marketing.hero.liveCardTitle")}
                     fill
                     sizes="(max-width: 768px) 100vw, 32rem"

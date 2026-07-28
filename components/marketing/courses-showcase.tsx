@@ -28,7 +28,7 @@ const ITEMS: ShowcaseItem[] = [
     subjectAr: "علوم",
     level: "exam",
     image:
-      "https://images.unsplash.com/photo-1509228468518-180dd4864904?auto=format&fit=crop&w=800&q=70",
+      "https://images.unsplash.com/photo-1523240795612-9a054b0db644?auto=format&fit=crop&w=800&q=70",
   },
   {
     title: "Physics & Chemistry",
@@ -37,7 +37,7 @@ const ITEMS: ShowcaseItem[] = [
     subjectAr: "علوم",
     level: "high",
     image:
-      "https://images.unsplash.com/photo-1532094349884-543bc11b234d?auto=format&fit=crop&w=800&q=70",
+      "https://images.unsplash.com/photo-1513258496099-48168024aec0?auto=format&fit=crop&w=800&q=70",
   },
   {
     title: "Languages — Français",
@@ -46,7 +46,7 @@ const ITEMS: ShowcaseItem[] = [
     subjectAr: "لغات",
     level: "high",
     image:
-      "https://images.unsplash.com/photo-1456513080510-7bf3a84b82f8?auto=format&fit=crop&w=800&q=70",
+      "https://images.unsplash.com/photo-1610484826967-09c5720778c7?auto=format&fit=crop&w=800&q=70",
   },
   {
     title: "BEM Revision",
@@ -55,7 +55,7 @@ const ITEMS: ShowcaseItem[] = [
     subjectAr: "كل المواد",
     level: "middle",
     image:
-      "https://images.unsplash.com/photo-1513258496099-48168024aec0?auto=format&fit=crop&w=800&q=70",
+      "https://images.unsplash.com/photo-1522881193457-37ae97c905bf?auto=format&fit=crop&w=800&q=70",
   },
   {
     title: "University Foundations",
@@ -64,7 +64,7 @@ const ITEMS: ShowcaseItem[] = [
     subjectAr: "علوم",
     level: "university",
     image:
-      "https://images.unsplash.com/photo-1541339907198-e08756dedf3f?auto=format&fit=crop&w=800&q=70",
+      "https://images.unsplash.com/photo-1544717297-fa95b6ee9643?auto=format&fit=crop&w=800&q=70",
   },
 ];
 

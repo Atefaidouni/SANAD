@@ -39,8 +39,8 @@ export function Contact() {
   };
 
   const info = [
-    { icon: Mail, label: t("marketing.contact.emailLabel"), value: "hello@mafaz.dz" },
-    { icon: Phone, label: t("marketing.contact.phoneLabel"), value: "+213 661 00 00 00" },
+    { icon: Mail, label: t("marketing.contact.emailLabel"), value: "Contact.sanad.dz@gmail.com" },
+    { icon: Phone, label: t("marketing.contact.phoneLabel"), value: "0563 53 28 90" },
     { icon: MapPin, label: t("marketing.contact.addressLabel"), value: t("marketing.contact.address") },
   ];
 

@@ -50,11 +50,11 @@ export function MarketingFooter() {
             <ul className="space-y-2.5 text-sm text-muted-foreground">
               <li className="flex items-center gap-2">
                 <Mail className="size-4 text-emerald-600 dark:text-emerald-400" />
-                <span>Mafazacademy@gmail.com</span>
+                <span>Contact.sanad.dz@gmail.com</span>
               </li>
               <li className="flex items-center gap-2">
                 <Phone className="size-4 text-emerald-600 dark:text-emerald-400" />
-                <span dir="ltr">+213 791 152 178</span>
+                <span dir="ltr">0563 53 28 90</span>
               </li>
             </ul>
           </div>
