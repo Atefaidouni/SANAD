@@ -517,7 +517,25 @@ const mutations = {
     requireAdmin(current);
     const rows = await db.select({ courseId: schema.lessons.courseId }).from(schema.lessons).where(eq(schema.lessons.id, args.lessonId)).limit(1);
     await db.delete(schema.lessons).where(eq(schema.lessons.id, args.lessonId));
-    if (rows[0]) await syncCourseDuration(rows[0].courseId);
+    if (rows[0]) {
+      const courseId = rows[0].courseId;
+      await syncCourseDuration(courseId);
+
+      // Deleting a lesson must not leave its id behind in enrollments'
+      // completedLessonIds — a stale id there would inflate the numerator
+      // while `total` (recomputed from the live lesson list) shrinks,
+      // pushing progressPercent past 100.
+      const remainingLessons = await db.select({ id: schema.lessons.id }).from(schema.lessons).where(eq(schema.lessons.courseId, courseId));
+      const total = remainingLessons.length || 1;
+      const enrollmentRows = await db.select().from(schema.enrollments).where(eq(schema.enrollments.courseId, courseId));
+      for (const e of enrollmentRows) {
+        const completed = (e.completedLessonIds ?? []).filter((id) => id !== args.lessonId);
+        if (completed.length !== (e.completedLessonIds ?? []).length) {
+          const progress = Math.round((completed.length / total) * 100);
+          await db.update(schema.enrollments).set({ completedLessonIds: completed, progressPercent: progress }).where(eq(schema.enrollments.id, e.id));
+        }
+      }
+    }
     return ok();
   },
 
@@ -676,8 +694,12 @@ const mutations = {
       .where(and(eq(schema.enrollments.userId, u.id), eq(schema.enrollments.courseId, args.courseId))).limit(1);
     const e = rows[0];
     if (!e || e.status !== "active") return fail("not_enrolled");
-    const total = (await db.select({ id: schema.lessons.id }).from(schema.lessons).where(eq(schema.lessons.courseId, args.courseId))).length || 1;
-    const set = new Set(e.completedLessonIds ?? []);
+    const courseLessonIds = new Set((await db.select({ id: schema.lessons.id }).from(schema.lessons).where(eq(schema.lessons.courseId, args.courseId))).map((l) => l.id));
+    const total = courseLessonIds.size || 1;
+    // Intersect with the course's live lesson ids so any stale id left over
+    // from a deleted lesson (old data, or a future bug) can never inflate
+    // the count past `total` — self-healing rather than trusting stored state.
+    const set = new Set((e.completedLessonIds ?? []).filter((id) => courseLessonIds.has(id)));
     if (set.has(args.lessonId)) set.delete(args.lessonId);
     else set.add(args.lessonId);
     const completed = [...set];
