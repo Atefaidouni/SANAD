@@ -17,7 +17,7 @@
 import { config } from "dotenv";
 config({ path: ".env.local" });
 
-import { randomBytes } from "crypto";
+import { randomBytes, randomUUID } from "crypto";
 import bcrypt from "bcryptjs";
 import { reviews as seedReviews } from "../mock/seed";
 
@@ -38,9 +38,7 @@ async function main() {
   const { db, schema, ensureSchema } = await import("./index");
   const { eq } = await import("drizzle-orm");
 
-  // For local PGlite this creates the tables; for Neon it's a no-op (use db:push).
-  console.log("Ensuring schema…");
-  await ensureSchema();
+  await ensureSchema(); // no-op — schema is created via `npm run db:push`
 
   console.log("Seeding admin team…");
   const printedCredentials: { email: string; password: string }[] = [];
@@ -59,6 +57,7 @@ async function main() {
     const password = generatePassword();
     const passwordHash = await bcrypt.hash(password, 10);
     await db.insert(schema.users).values({
+      id: randomUUID(),
       firstName: a.firstName,
       lastName: a.lastName,
       email: a.email,
@@ -86,6 +85,7 @@ async function main() {
     console.log("Seeding testimonials…");
     await db.insert(schema.reviews).values(
       seedReviews.map((r) => ({
+        id: randomUUID(),
         authorName: r.authorName,
         authorRole: r.authorRole,
         rating: r.rating,

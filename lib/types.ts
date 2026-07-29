@@ -1,8 +1,7 @@
 /**
  * App-facing domain types. These mirror the Drizzle row shapes in
- * `lib/db/schema.ts` but use plain JS `Date`/string ids so the mock store and
- * the UI can share one vocabulary. When swapping to Postgres, these line up
- * with `typeof table.$inferSelect`.
+ * `lib/db/schema.ts` (`typeof table.$inferSelect`) but use plain JS
+ * `Date`/string ids so the mock store and the UI can share one vocabulary.
  */
 
 export type Role = "student" | "teacher" | "admin";

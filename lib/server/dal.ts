@@ -9,7 +9,7 @@
  *   can call them by name through `/api/rpc`.
  */
 import "server-only";
-import { randomBytes } from "crypto";
+import { randomBytes, randomUUID } from "crypto";
 import { and, eq, gte, inArray } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
 import { hashPassword, verifyPassword } from "./auth";
@@ -49,6 +49,11 @@ export interface Result<T = unknown> {
 
 const ok = <T,>(data?: T): Result<T> => ({ ok: true, data });
 const fail = (error: string): Result<never> => ({ ok: false, error });
+
+/** MySQL has no server-side default for generating ids (no UUID type), so
+ *  every insert generates its own id in application code instead of relying
+ *  on `.returning()` (which MySQL doesn't support at all). */
+const newId = () => randomUUID();
 
 class AuthError extends Error {}
 function requireAuth(current: User | null): User {
@@ -268,20 +273,21 @@ export async function registerUser(input: {
 
   const role: Role = input.role ?? "student";
   const passwordHash = await hashPassword(input.password);
-  const [row] = await db
-    .insert(schema.users)
-    .values({
-      firstName: input.firstName.trim(),
-      lastName: input.lastName.trim(),
-      email,
-      passwordHash,
-      role,
-      isVerified: true,
-      approved: role !== "teacher",
-      locale: "en",
-      theme: "system",
-    })
-    .returning({ id: schema.users.id, firstName: schema.users.firstName, lastName: schema.users.lastName });
+  const firstName = input.firstName.trim();
+  const lastName = input.lastName.trim();
+  const id = newId();
+  await db.insert(schema.users).values({
+    id,
+    firstName,
+    lastName,
+    email,
+    passwordHash,
+    role,
+    isVerified: true,
+    approved: role !== "teacher",
+    locale: "en",
+    theme: "system",
+  });
 
   // New teacher → notify all admins of the pending approval.
   if (role === "teacher") {
@@ -290,10 +296,10 @@ export async function registerUser(input: {
       admins.map((a) => a.id),
       "notif.teacherApproval.title",
       "notif.teacherApproval.body",
-      { teacher: `${row.firstName} ${row.lastName}`.trim() }
+      { teacher: `${firstName} ${lastName}`.trim() }
     );
   }
-  return ok({ userId: row.id });
+  return ok({ userId: id });
 }
 
 /** Verify credentials; returns the user id on success. */
@@ -334,6 +340,7 @@ export async function requestPasswordReset(email: string): Promise<{ token: stri
 
   const token = randomBytes(32).toString("base64url");
   await db.insert(schema.otps).values({
+    id: newId(),
     userId: user.id,
     email: normalized,
     code: token,
@@ -367,7 +374,7 @@ async function pushNotifications(
 ) {
   if (!userIds.length) return;
   await db.insert(schema.notifications).values(
-    userIds.map((userId) => ({ userId, titleKey, bodyKey, meta }))
+    userIds.map((userId) => ({ id: newId(), userId, titleKey, bodyKey, meta }))
   );
 }
 
@@ -393,6 +400,7 @@ async function nextCodeLabelStart(courseId: string): Promise<number> {
 async function generateCodes(courseId: string, count: number) {
   const start = await nextCodeLabelStart(courseId);
   const values = Array.from({ length: count }, (_, i) => ({
+    id: newId(),
     courseId,
     code: generateAccessCode(),
     label: `#${start + i + 1}`,
@@ -484,7 +492,9 @@ const mutations = {
     const teacherEmail = isAdmin
       ? input.teacherEmail?.trim().toLowerCase() || null
       : actor.email.toLowerCase();
-    const [row] = await db.insert(schema.courses).values({
+    const id = newId();
+    await db.insert(schema.courses).values({
+      id,
       title: input.title,
       titleAr: input.titleAr,
       description: input.description,
@@ -501,14 +511,14 @@ const mutations = {
       isGoldPack: input.isGoldPack ?? false,
       rating: 5,
       durationHours: 0,
-    }).returning({ id: schema.courses.id });
+    });
 
-    await generateCodes(row.id, input.codeCount ?? 10);
+    await generateCodes(id, input.codeCount ?? 10);
 
     const students = await db.select({ id: schema.users.id }).from(schema.users).where(eq(schema.users.role, "student"));
     await pushNotifications(students.map((s) => s.id), "notif.courseAdded.title", "notif.courseAdded.body", { course: input.title });
 
-    return ok({ courseId: row.id });
+    return ok({ courseId: id });
   },
 
   async updateCourse(current: User | null, args: { id: string; patch: Record<string, unknown> }): Promise<Result> {
@@ -550,6 +560,7 @@ const mutations = {
     requireAdmin(current);
     const existing = await db.select({ id: schema.lessons.id }).from(schema.lessons).where(eq(schema.lessons.courseId, args.courseId));
     await db.insert(schema.lessons).values({
+      id: newId(),
       courseId: args.courseId,
       title: args.input.title,
       titleAr: args.input.titleAr,
@@ -655,7 +666,7 @@ const mutations = {
     const existing = await db.select({ id: schema.enrollments.id }).from(schema.enrollments)
       .where(and(eq(schema.enrollments.userId, u.id), eq(schema.enrollments.courseId, args.courseId))).limit(1);
     if (existing.length) return ok();
-    await db.insert(schema.enrollments).values({ userId: u.id, courseId: args.courseId, status: "saved" });
+    await db.insert(schema.enrollments).values({ id: newId(), userId: u.id, courseId: args.courseId, status: "saved" });
     return ok();
   },
 
@@ -675,16 +686,20 @@ const mutations = {
     const code = args.code.trim().toUpperCase();
 
     // Atomically claim the code only if it's available AND for this course.
-    const claimed = await db.update(schema.courseCodes)
+    // MySQL has no UPDATE...RETURNING, but the WHERE clause (in particular
+    // status='available') is still what makes this atomic under concurrent
+    // requests: only one can ever match and flip the row, no matter which
+    // order they interleave in — a second concurrent claim just affects zero
+    // rows. `affectedRows` tells us whether *this* call was the one that won.
+    const [updateResult] = await db.update(schema.courseCodes)
       .set({ status: "used", boundUserId: u.id, usedAt: new Date() })
       .where(and(
         eq(schema.courseCodes.code, code),
         eq(schema.courseCodes.courseId, args.courseId),
         eq(schema.courseCodes.status, "available")
-      ))
-      .returning({ id: schema.courseCodes.id });
+      ));
 
-    if (!claimed.length) {
+    if (!updateResult.affectedRows) {
       // Diagnose why the claim failed.
       const found = await db.select().from(schema.courseCodes).where(eq(schema.courseCodes.code, code)).limit(1);
       if (!found.length) return fail("code_invalid");
@@ -695,7 +710,10 @@ const mutations = {
       return fail("code_invalid");
     }
 
-    const codeId = claimed[0].id;
+    // Code is unique, so it's now safe to look up the id of the row we just claimed.
+    const [claimedCode] = await db.select({ id: schema.courseCodes.id }).from(schema.courseCodes).where(eq(schema.courseCodes.code, code)).limit(1);
+    const codeId = claimedCode.id;
+
     const existing = await db.select({ id: schema.enrollments.id }).from(schema.enrollments)
       .where(and(eq(schema.enrollments.userId, u.id), eq(schema.enrollments.courseId, args.courseId))).limit(1);
 
@@ -704,10 +722,9 @@ const mutations = {
       enrollmentId = existing[0].id;
       await db.update(schema.enrollments).set({ status: "active", courseCodeId: codeId }).where(eq(schema.enrollments.id, enrollmentId));
     } else {
-      const [ins] = await db.insert(schema.enrollments)
-        .values({ userId: u.id, courseId: args.courseId, courseCodeId: codeId, status: "active" })
-        .returning({ id: schema.enrollments.id });
-      enrollmentId = ins.id;
+      enrollmentId = newId();
+      await db.insert(schema.enrollments)
+        .values({ id: enrollmentId, userId: u.id, courseId: args.courseId, courseCodeId: codeId, status: "active" });
     }
     return ok({ enrollmentId });
   },
@@ -720,10 +737,12 @@ const mutations = {
     if (existing.length) {
       enrollmentId = existing[0].id;
     } else {
-      const [ins] = await db.insert(schema.enrollments).values({ userId: u.id, courseId: args.courseId, status: "saved" }).returning({ id: schema.enrollments.id });
-      enrollmentId = ins.id;
+      enrollmentId = newId();
+      await db.insert(schema.enrollments).values({ id: enrollmentId, userId: u.id, courseId: args.courseId, status: "saved" });
     }
-    const [order] = await db.insert(schema.bookOrders).values({
+    const orderId = newId();
+    await db.insert(schema.bookOrders).values({
+      id: orderId,
       enrollmentId,
       userId: u.id,
       courseId: args.courseId,
@@ -733,8 +752,8 @@ const mutations = {
       baladiya: args.baladiya,
       deliveryType: args.deliveryType,
       status: "pending",
-    }).returning({ id: schema.bookOrders.id });
-    return ok({ orderId: order.id });
+    });
+    return ok({ orderId });
   },
 
   async completeLesson(current: User | null, args: { courseId: string; lessonId: string }): Promise<Result<{ progress: number }>> {
@@ -759,8 +778,9 @@ const mutations = {
 
   async askQuestion(current: User | null, args: { courseId: string; title: string; body: string }): Promise<Result<{ id: string }>> {
     const u = requireAuth(current);
-    const [row] = await db.insert(schema.questions).values({ courseId: args.courseId, userId: u.id, title: args.title, body: args.body, resolved: false }).returning({ id: schema.questions.id });
-    return ok({ id: row.id });
+    const id = newId();
+    await db.insert(schema.questions).values({ id, courseId: args.courseId, userId: u.id, title: args.title, body: args.body, resolved: false });
+    return ok({ id });
   },
 
   async replyToQuestion(current: User | null, args: { questionId: string; body: string }): Promise<Result<{ id: string }>> {
@@ -769,8 +789,9 @@ const mutations = {
     if (!q.length) return fail("not_found");
     // Only the assigned teacher or an admin may reply (mirrors the UI).
     if (!(await canManageCourse(u, q[0].courseId))) return fail("forbidden");
-    const [row] = await db.insert(schema.replies).values({ questionId: args.questionId, userId: u.id, body: args.body }).returning({ id: schema.replies.id });
-    return ok({ id: row.id });
+    const id = newId();
+    await db.insert(schema.replies).values({ id, questionId: args.questionId, userId: u.id, body: args.body });
+    return ok({ id });
   },
 
   async toggleResolved(current: User | null, args: { questionId: string }): Promise<Result> {
@@ -799,12 +820,14 @@ const mutations = {
   async createQuiz(current: User | null, args: { courseId: string; title: string }): Promise<Result<{ quizId: string }>> {
     const u = requireAuth(current);
     if (!(await canManageCourse(u, args.courseId))) return fail("forbidden");
-    const [row] = await db.insert(schema.quizzes).values({
+    const id = newId();
+    await db.insert(schema.quizzes).values({
+      id,
       courseId: args.courseId,
       title: args.title,
       status: "draft",
-    }).returning({ id: schema.quizzes.id });
-    return ok({ quizId: row.id });
+    });
+    return ok({ quizId: id });
   },
 
   async updateQuiz(current: User | null, args: { id: string; patch: Record<string, unknown> }): Promise<Result> {
@@ -841,7 +864,9 @@ const mutations = {
     const [src] = await db.select().from(schema.quizzes).where(eq(schema.quizzes.id, args.id)).limit(1);
     if (!src) return fail("not_found");
 
-    const [copy] = await db.insert(schema.quizzes).values({
+    const copyId = newId();
+    await db.insert(schema.quizzes).values({
+      id: copyId,
       courseId: src.courseId,
       title: `${src.title} (copy)`,
       titleAr: src.titleAr ? `${src.titleAr} (نسخة)` : src.titleAr,
@@ -857,12 +882,14 @@ const mutations = {
       showAnswersAfterSubmit: src.showAnswersAfterSubmit,
       showExplanationsAfterSubmit: src.showExplanationsAfterSubmit,
       status: "draft",
-    }).returning({ id: schema.quizzes.id });
+    });
 
     const questions = await db.select().from(schema.quizQuestions).where(eq(schema.quizQuestions.quizId, args.id));
     for (const q of questions) {
-      const [newQ] = await db.insert(schema.quizQuestions).values({
-        quizId: copy.id,
+      const newQId = newId();
+      await db.insert(schema.quizQuestions).values({
+        id: newQId,
+        quizId: copyId,
         type: q.type,
         text: q.text,
         textAr: q.textAr,
@@ -871,15 +898,15 @@ const mutations = {
         order: q.order,
         explanation: q.explanation,
         explanationAr: q.explanationAr,
-      }).returning({ id: schema.quizQuestions.id });
+      });
       const choices = await db.select().from(schema.quizChoices).where(eq(schema.quizChoices.questionId, q.id));
       if (choices.length) {
         await db.insert(schema.quizChoices).values(
-          choices.map((c) => ({ questionId: newQ.id, text: c.text, textAr: c.textAr, isCorrect: c.isCorrect, order: c.order }))
+          choices.map((c) => ({ id: newId(), questionId: newQId, text: c.text, textAr: c.textAr, isCorrect: c.isCorrect, order: c.order }))
         );
       }
     }
-    return ok({ quizId: copy.id });
+    return ok({ quizId: copyId });
   },
 
   async addQuizQuestion(current: User | null, args: {
@@ -894,7 +921,9 @@ const mutations = {
     const owner = await requireQuizOwner(u, args.quizId);
     if (!owner) return fail("not_found");
     const existing = await db.select({ id: schema.quizQuestions.id }).from(schema.quizQuestions).where(eq(schema.quizQuestions.quizId, args.quizId));
-    const [row] = await db.insert(schema.quizQuestions).values({
+    const id = newId();
+    await db.insert(schema.quizQuestions).values({
+      id,
       quizId: args.quizId,
       type: args.input.type,
       text: args.input.text,
@@ -904,13 +933,13 @@ const mutations = {
       order: existing.length + 1,
       explanation: args.input.explanation,
       explanationAr: args.input.explanationAr,
-    }).returning({ id: schema.quizQuestions.id });
+    });
     if (args.input.choices?.length) {
       await db.insert(schema.quizChoices).values(
-        args.input.choices.map((c, i) => ({ questionId: row.id, text: c.text, textAr: c.textAr, isCorrect: !!c.isCorrect, order: i }))
+        args.input.choices.map((c, i) => ({ id: newId(), questionId: id, text: c.text, textAr: c.textAr, isCorrect: !!c.isCorrect, order: i }))
       );
     }
-    return ok({ id: row.id });
+    return ok({ id });
   },
 
   async updateQuizQuestion(current: User | null, args: {
@@ -938,7 +967,7 @@ const mutations = {
     await db.delete(schema.quizChoices).where(eq(schema.quizChoices.questionId, args.id));
     if (args.input.choices?.length) {
       await db.insert(schema.quizChoices).values(
-        args.input.choices.map((c, i) => ({ questionId: args.id, text: c.text, textAr: c.textAr, isCorrect: !!c.isCorrect, order: i }))
+        args.input.choices.map((c, i) => ({ id: newId(), questionId: args.id, text: c.text, textAr: c.textAr, isCorrect: !!c.isCorrect, order: i }))
       );
     }
     return ok();
@@ -998,13 +1027,23 @@ const mutations = {
       const questionRows = await db.select({ points: schema.quizQuestions.points }).from(schema.quizQuestions).where(eq(schema.quizQuestions.quizId, args.quizId));
       const maxScore = questionRows.reduce((s, q) => s + q.points, 0);
 
-      const [row] = await db.insert(schema.quizAttempts).values({
+      const startedAt = new Date();
+      const id = newId();
+      const attemptNumber = submittedCount + 1;
+      await db.insert(schema.quizAttempts).values({
+        id,
         quizId: args.quizId,
         userId: u.id,
-        attemptNumber: submittedCount + 1,
+        attemptNumber,
+        startedAt,
         maxScore,
-      }).returning();
-      attemptRow = row;
+      });
+      // Constructed directly (matching exactly what was just inserted) rather
+      // than re-selecting — MySQL has no INSERT...RETURNING.
+      attemptRow = {
+        id, quizId: args.quizId, userId: u.id, attemptNumber, startedAt,
+        submittedAt: null, score: null, maxScore, percentage: null, passed: null, timeSpentSec: null,
+      };
     }
 
     const questionRows = await db.select().from(schema.quizQuestions).where(eq(schema.quizQuestions.quizId, args.quizId));
@@ -1051,25 +1090,28 @@ const mutations = {
       const isCorrect = selectedSet.size === correctIds.size && [...correctIds].every((id) => selectedSet.has(id));
       const pointsEarned = isCorrect ? q.points : 0;
       totalScore += pointsEarned;
-      return { attemptId: attempt.id, questionId: q.id, selectedChoiceIds: selected, isCorrect, pointsEarned };
+      return { id: newId(), attemptId: attempt.id, questionId: q.id, selectedChoiceIds: selected, isCorrect, pointsEarned };
     });
 
-    const insertedAnswers = answerRows.length ? await db.insert(schema.quizAnswers).values(answerRows).returning() : [];
+    if (answerRows.length) await db.insert(schema.quizAnswers).values(answerRows);
 
     const maxScore = attempt.maxScore || questionRows.reduce((s, q) => s + q.points, 0);
     const percentage = maxScore > 0 ? Math.round((totalScore / maxScore) * 100) : 0;
     const [quizRow] = await db.select({ passingScore: schema.quizzes.passingScore }).from(schema.quizzes).where(eq(schema.quizzes.id, attempt.quizId)).limit(1);
     const passed = percentage >= (quizRow?.passingScore ?? 60);
     const timeSpentSec = Math.max(0, Math.round((Date.now() - attempt.startedAt.getTime()) / 1000));
+    const submittedAt = new Date();
 
-    const [updated] = await db.update(schema.quizAttempts).set({
-      submittedAt: new Date(),
+    await db.update(schema.quizAttempts).set({
+      submittedAt,
       score: totalScore,
       maxScore,
       percentage,
       passed,
       timeSpentSec,
-    }).where(eq(schema.quizAttempts.id, attempt.id)).returning();
+    }).where(eq(schema.quizAttempts.id, attempt.id));
+    // Constructed directly rather than re-selecting — MySQL has no UPDATE...RETURNING.
+    const updated = { ...attempt, submittedAt, score: totalScore, maxScore, percentage, passed, timeSpentSec };
 
     const questions = [...questionRows]
       .sort((a, b) => a.order - b.order)
@@ -1077,7 +1119,7 @@ const mutations = {
 
     return ok({
       attempt: mapQuizAttempt(updated),
-      answers: insertedAnswers.map(mapQuizAnswer),
+      answers: answerRows.map(mapQuizAnswer),
       questions,
     });
   },

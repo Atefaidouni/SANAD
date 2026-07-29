@@ -8,19 +8,19 @@ manage their assigned courses and grade quizzes.
 ## Stack
 
 - **Next.js 16** (App Router, TypeScript), Tailwind CSS, Framer Motion
-- **Drizzle ORM** over Postgres via `node-postgres` — works with **any** standard
-  Postgres server in production (your own host's built-in PostgreSQL, Neon, Supabase,
-  RDS, ...), embedded **PGlite** for zero-setup local dev (no external database at all)
+- **Drizzle ORM** over **MySQL** (via `mysql2`) — works with any standard MySQL
+  server: your hosting provider's own MySQL, a local install, PlanetScale, RDS, etc.
 - Auth: bcrypt password hashes + a signed httpOnly JWT session cookie (`jose`)
 - Email: [Resend](https://resend.com) (password-reset links)
 
 ## Requirements
 
 - Node.js 20+
-- A Postgres database for production (local dev needs nothing) — either your hosting
-  provider's own PostgreSQL (e.g. cPanel-style panels often have a "PostgreSQL
-  Databases" tool separate from MySQL), or an external provider like
-  [Neon](https://neon.tech) if your host doesn't offer Postgres
+- A MySQL database, reachable both for local development and production — there is
+  no embedded/zero-setup local database (MySQL has no practical equivalent to an
+  embedded, in-process engine the way Postgres has PGlite). A local MySQL install,
+  Docker (`docker run -e MYSQL_ROOT_PASSWORD=x -p 3306:3306 mysql:8`), or a small
+  free-tier hosted MySQL all work fine for local dev.
 - A [Resend](https://resend.com) account with a verified sending domain (password-reset emails)
 
 ## Environment variables
@@ -29,7 +29,7 @@ Copy `.env.example` to `.env.local` and fill in real values:
 
 | Variable | Required | Description |
 |---|---|---|
-| `DATABASE_URL` | Production only | `postgresql://user:password@host:5432/dbname` — add `?sslmode=require` only if your database requires SSL (e.g. Neon; a same-server hosting-provider Postgres over `localhost` usually doesn't). Omit locally to use embedded PGlite. |
+| `DATABASE_URL` | **Yes, always** (local dev too) | `mysql://user:password@host:3306/dbname`. |
 | `SESSION_SECRET` | **Yes, in production** | Signs the session cookie. Generate with `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"`. The app refuses to start in production without this set. |
 | `APP_URL` | **Yes, in production** | Public base URL (no trailing slash), used to build password-reset links. Deliberately not inferred from the request's Host header. |
 | `RESEND_API_KEY` | **Yes, in production** | From your Resend account. |
@@ -39,36 +39,29 @@ Copy `.env.example` to `.env.local` and fill in real values:
 
 ```bash
 npm install
+npm run db:push     # creates the schema on your MySQL database
+npm run db:seed     # seeds admin/manager accounts + marketing testimonials
 npm run dev
 ```
 
-That's it — with no `DATABASE_URL` set, the app uses an embedded Postgres (PGlite)
-persisted to `.pgdata/` in the project root, auto-migrated on first use. Password-reset
-emails will fail to send locally unless you also set the Resend variables; the request
-endpoint still responds successfully either way (it never reveals whether sending
-worked, to avoid leaking account existence) — check the server console for the logged
-error if you need to debug it.
-
-Seed demo accounts (admin, manager, teacher, student):
-
-```bash
-npm run db:seed
-```
+`DATABASE_URL` must point at a real, reachable MySQL server even for local dev (see
+Requirements above). Password-reset emails will fail to send locally unless you also
+set the Resend variables; the request endpoint still responds successfully either way
+(it never reveals whether sending worked, to avoid leaking account existence) — check
+the server console for the logged error if you need to debug it.
 
 ## Database
 
-Schema lives in `lib/db/schema.ts`. After changing it:
+Schema lives in `lib/db/schema.ts`. Ids are `varchar(36)` (UUID strings) generated in
+application code (`crypto.randomUUID()`) rather than a database default — MySQL has
+no native UUID column type.
+
+After changing the schema:
 
 ```bash
 npm run db:generate   # writes a new migration file under lib/db/migrations
+npm run db:push        # applies it to DATABASE_URL directly (no migration runner)
 ```
-
-- **Local (PGlite):** migrations are applied automatically via `ensureSchema()`
-  whenever a CLI script runs (`db:seed`, etc.) — the running dev server does **not**
-  re-apply migrations on its own, so if you change the schema, stop the dev server,
-  run a script that calls `ensureSchema()` (e.g. `npm run db:seed`), then restart.
-- **Production:** run `npm run db:push` against `DATABASE_URL` before deploying
-  a build that depends on a schema change.
 
 ## Deploying (shared hosting / cPanel)
 
@@ -97,5 +90,5 @@ This runs `next build` (standalone output) and packs `.next/static` + `public/` 
 | `npm run deploy:cpanel` | Build + package for shared/cPanel Node hosting |
 | `npm run db:generate` | Generate a migration file from schema changes |
 | `npm run db:push` | Push schema to `DATABASE_URL` directly (no migration files) |
-| `npm run db:seed` | Apply local migrations + seed demo accounts |
+| `npm run db:seed` | Seed admin/manager accounts + marketing testimonials |
 | `npm run db:studio` | Drizzle Studio (DB browser) |

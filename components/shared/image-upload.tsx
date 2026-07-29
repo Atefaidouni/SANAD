@@ -10,7 +10,7 @@ import { cn } from "@/lib/utils";
 const MAX_BYTES = 3 * 1024 * 1024; // 3 MB, mirrors the server-side cap
 
 /** Uploads an image immediately on selection (bytes stored server-side in
- *  Postgres via /api/uploads) and hands back the resulting upload id. */
+ *  the database via /api/uploads) and hands back the resulting upload id. */
 export function ImageUpload({
   value,
   onChange,

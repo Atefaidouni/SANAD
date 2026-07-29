@@ -86,8 +86,8 @@ export async function getSessionUser(): Promise<User | null> {
       .limit(1);
     return rows[0] ? mapUser(rows[0]) : null;
   } catch (err) {
-    // DB driver (pglite) may abort in some local environments. Don't crash
-    // the whole request — log and return null so routes can fall back.
+    // Don't crash the whole request on a transient DB error — log and
+    // return null so routes can fall back to "not authenticated".
     // eslint-disable-next-line no-console
     console.error("DB read failed in getSessionUser:", err);
     return null;

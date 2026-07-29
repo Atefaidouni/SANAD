@@ -3,66 +3,53 @@
  *
  * The client-side store (`lib/mock/store.ts`) mirrors these row shapes for its
  * cache, but reads/writes for real go through Drizzle queries in
- * `lib/server/dal.ts` against this schema (Neon in production, PGlite locally).
+ * `lib/server/dal.ts` against this schema (MySQL, via `drizzle-orm/mysql2`).
+ *
+ * MySQL has no native UUID column type, so ids are `varchar(36)` generated in
+ * application code (`crypto.randomUUID()`) at insert time rather than a
+ * database-side default — see `newId()` in `lib/server/dal.ts`.
  */
 import { relations } from "drizzle-orm";
 import {
   boolean,
   customType,
   index,
-  integer,
-  jsonb,
-  pgEnum,
-  pgTable,
+  int,
+  json,
+  mysqlEnum,
+  mysqlTable,
   text,
   timestamp,
-  uuid,
-} from "drizzle-orm/pg-core";
+  varchar,
+} from "drizzle-orm/mysql-core";
 
-/** Raw bytes column — used to store uploaded image data directly in
- *  Postgres so it works identically on Neon, cPanel Postgres, and local
- *  PGlite, with no extra storage service. */
-const bytea = customType<{ data: Buffer; driverData: Buffer }>({
+/** UUID string primary/foreign key — see file header. */
+const id36 = () => varchar("id", { length: 36 });
+const fk36 = (name: string) => varchar(name, { length: 36 });
+
+/** Raw bytes column — used to store uploaded image data directly in the
+ *  database so it works with no extra storage service. LONGBLOB comfortably
+ *  covers the 3MB upload limit enforced in app/api/uploads/route.ts. */
+const blob = customType<{ data: Buffer; driverData: Buffer }>({
   dataType() {
-    return "bytea";
+    return "longblob";
   },
 });
 
-export const roleEnum = pgEnum("role", ["student", "teacher", "admin"]);
-export const localeEnum = pgEnum("locale", ["en", "ar"]);
-export const themeEnum = pgEnum("theme", ["light", "dark", "system"]);
-export const codeStatusEnum = pgEnum("code_status", ["available", "used", "revoked"]);
-export const enrollmentStatusEnum = pgEnum("enrollment_status", ["saved", "active"]);
-export const otpPurposeEnum = pgEnum("otp_purpose", ["signup", "reset", "join"]);
-export const deliveryTypeEnum = pgEnum("delivery_type", ["home", "office", "pickup"]);
-export const orderStatusEnum = pgEnum("order_status", [
-  "pending",
-  "confirmed",
-  "shipped",
-  "delivered",
-]);
-export const levelEnum = pgEnum("level", ["middle", "high", "exam"]);
-export const quizStatusEnum = pgEnum("quiz_status", ["draft", "published"]);
-export const quizQuestionTypeEnum = pgEnum("quiz_question_type", [
-  "single",
-  "multiple",
-  "true_false",
-]);
-
-export const users = pgTable("users", {
-  id: uuid("id").defaultRandom().primaryKey(),
+export const users = mysqlTable("users", {
+  id: id36().primaryKey(),
   firstName: text("first_name").notNull(),
   lastName: text("last_name").notNull(),
-  email: text("email").notNull().unique(),
+  email: varchar("email", { length: 255 }).notNull().unique(),
   passwordHash: text("password_hash").notNull(),
-  role: roleEnum("role").notNull().default("student"),
+  role: mysqlEnum("role", ["student", "teacher", "admin"]).notNull().default("student"),
   isVerified: boolean("is_verified").notNull().default(false),
   approved: boolean("approved").notNull().default(true),
-  locale: localeEnum("locale").notNull().default("en"),
-  theme: themeEnum("theme").notNull().default("system"),
+  locale: mysqlEnum("locale", ["en", "ar"]).notNull().default("en"),
+  theme: mysqlEnum("theme", ["light", "dark", "system"]).notNull().default("system"),
   avatar: text("avatar"),
   phone: text("phone"),
-  age: integer("age"),
+  age: int("age"),
   // Profile fields the app stores flat on the user (matches lib/types User).
   wilaya: text("wilaya"),
   baladiya: text("baladiya"),
@@ -70,37 +57,37 @@ export const users = pgTable("users", {
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
-export const courses = pgTable("courses", {
-  id: uuid("id").defaultRandom().primaryKey(),
+export const courses = mysqlTable("courses", {
+  id: id36().primaryKey(),
   title: text("title").notNull(),
   titleAr: text("title_ar"),
   description: text("description"),
   descriptionAr: text("description_ar"),
   subject: text("subject").notNull(),
   subjectAr: text("subject_ar"),
-  level: levelEnum("level").notNull(),
+  level: mysqlEnum("level", ["middle", "high", "exam"]).notNull(),
   division: text("division"),
-  price: integer("price").notNull().default(0),
+  price: int("price").notNull().default(0),
   teacherName: text("teacher_name").notNull(),
   teacherEmail: text("teacher_email"),
   zoomUrl: text("zoom_url"),
   thumbnail: text("thumbnail"),
-  tags: jsonb("tags").$type<string[]>().default([]),
+  tags: json("tags").$type<string[]>().default([]),
   isPopular: boolean("is_popular").notNull().default(false),
   isGoldPack: boolean("is_gold_pack").notNull().default(false),
-  rating: integer("rating").notNull().default(5), // 0..5 (app uses whole stars)
-  durationHours: integer("duration_hours").notNull().default(0),
+  rating: int("rating").notNull().default(5), // 0..5 (app uses whole stars)
+  durationHours: int("duration_hours").notNull().default(0),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
-export const lessons = pgTable("lessons", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  courseId: uuid("course_id").notNull().references(() => courses.id),
+export const lessons = mysqlTable("lessons", {
+  id: id36().primaryKey(),
+  courseId: fk36("course_id").notNull().references(() => courses.id),
   title: text("title").notNull(),
   titleAr: text("title_ar"),
   videoUrl: text("video_url"),
-  durationMin: integer("duration_min").notNull().default(0),
-  order: integer("order").notNull().default(0),
+  durationMin: int("duration_min").notNull().default(0),
+  order: int("order").notNull().default(0),
   isPreview: boolean("is_preview").notNull().default(false),
 });
 
@@ -108,25 +95,25 @@ export const lessons = pgTable("lessons", {
  * CourseCode — auto-generated per course. One code = one course = one access.
  * single-use: redeeming binds exactly one student and flips status to 'used'.
  */
-export const courseCodes = pgTable("course_codes", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  courseId: uuid("course_id").notNull().references(() => courses.id),
-  code: text("code").notNull().unique(),
+export const courseCodes = mysqlTable("course_codes", {
+  id: id36().primaryKey(),
+  courseId: fk36("course_id").notNull().references(() => courses.id),
+  code: varchar("code", { length: 64 }).notNull().unique(),
   label: text("label").notNull(), // e.g. "#35"
-  status: codeStatusEnum("status").notNull().default("available"),
-  boundUserId: uuid("bound_user_id").references(() => users.id),
+  status: mysqlEnum("status", ["available", "used", "revoked"]).notNull().default("available"),
+  boundUserId: fk36("bound_user_id").references(() => users.id),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   usedAt: timestamp("used_at"),
 });
 
-export const enrollments = pgTable("enrollments", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  userId: uuid("user_id").notNull().references(() => users.id),
-  courseId: uuid("course_id").notNull().references(() => courses.id),
-  courseCodeId: uuid("course_code_id").references(() => courseCodes.id),
-  status: enrollmentStatusEnum("status").notNull().default("active"),
-  progressPercent: integer("progress_percent").notNull().default(0),
-  completedLessonIds: jsonb("completed_lesson_ids").$type<string[]>().default([]),
+export const enrollments = mysqlTable("enrollments", {
+  id: id36().primaryKey(),
+  userId: fk36("user_id").notNull().references(() => users.id),
+  courseId: fk36("course_id").notNull().references(() => courses.id),
+  courseCodeId: fk36("course_code_id").references(() => courseCodes.id),
+  status: mysqlEnum("status", ["saved", "active"]).notNull().default("active"),
+  progressPercent: int("progress_percent").notNull().default(0),
+  completedLessonIds: json("completed_lesson_ids").$type<string[]>().default([]),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 }, (table) => [
   // Every enrollment lookup filters by this pair (join-course, complete-lesson,
@@ -134,31 +121,31 @@ export const enrollments = pgTable("enrollments", {
   index("enrollments_user_course_idx").on(table.userId, table.courseId),
 ]);
 
-export const savedCourses = pgTable("saved_courses", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  userId: uuid("user_id").notNull().references(() => users.id),
-  courseId: uuid("course_id").notNull().references(() => courses.id),
+export const savedCourses = mysqlTable("saved_courses", {
+  id: id36().primaryKey(),
+  userId: fk36("user_id").notNull().references(() => users.id),
+  courseId: fk36("course_id").notNull().references(() => courses.id),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
-export const bookOrders = pgTable("book_orders", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  enrollmentId: uuid("enrollment_id").references(() => enrollments.id),
-  userId: uuid("user_id").notNull().references(() => users.id),
-  courseId: uuid("course_id").notNull().references(() => courses.id),
+export const bookOrders = mysqlTable("book_orders", {
+  id: id36().primaryKey(),
+  enrollmentId: fk36("enrollment_id").references(() => enrollments.id),
+  userId: fk36("user_id").notNull().references(() => users.id),
+  courseId: fk36("course_id").notNull().references(() => courses.id),
   fullName: text("full_name").notNull(),
   phone: text("phone").notNull(),
   wilaya: text("wilaya").notNull(),
   baladiya: text("baladiya").notNull(),
-  deliveryType: deliveryTypeEnum("delivery_type").notNull().default("home"),
-  status: orderStatusEnum("status").notNull().default("pending"),
+  deliveryType: mysqlEnum("delivery_type", ["home", "office", "pickup"]).notNull().default("home"),
+  status: mysqlEnum("status", ["pending", "confirmed", "shipped", "delivered"]).notNull().default("pending"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
-export const questions = pgTable("questions", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  courseId: uuid("course_id").notNull().references(() => courses.id),
-  userId: uuid("user_id").notNull().references(() => users.id),
+export const questions = mysqlTable("questions", {
+  id: id36().primaryKey(),
+  courseId: fk36("course_id").notNull().references(() => courses.id),
+  userId: fk36("user_id").notNull().references(() => users.id),
   title: text("title").notNull(),
   body: text("body").notNull(),
   createdAt: timestamp("created_at").notNull().defaultNow(),
@@ -167,119 +154,119 @@ export const questions = pgTable("questions", {
   index("questions_course_idx").on(table.courseId),
 ]);
 
-export const replies = pgTable("replies", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  questionId: uuid("question_id").notNull().references(() => questions.id),
-  userId: uuid("user_id").notNull().references(() => users.id),
+export const replies = mysqlTable("replies", {
+  id: id36().primaryKey(),
+  questionId: fk36("question_id").notNull().references(() => questions.id),
+  userId: fk36("user_id").notNull().references(() => users.id),
   body: text("body").notNull(),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
-/** Generic uploaded-file store (bytes live in Postgres — no external storage
- *  service). Currently only used for quiz question images. */
-export const uploads = pgTable("uploads", {
-  id: uuid("id").defaultRandom().primaryKey(),
+/** Generic uploaded-file store (bytes live in the database — no external
+ *  storage service). Currently only used for quiz question images. */
+export const uploads = mysqlTable("uploads", {
+  id: id36().primaryKey(),
   mime: text("mime").notNull(),
-  data: bytea("data").notNull(),
-  size: integer("size").notNull(),
+  data: blob("data").notNull(),
+  size: int("size").notNull(),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
-export const quizzes = pgTable("quizzes", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  courseId: uuid("course_id").notNull().references(() => courses.id),
+export const quizzes = mysqlTable("quizzes", {
+  id: id36().primaryKey(),
+  courseId: fk36("course_id").notNull().references(() => courses.id),
   title: text("title").notNull(),
   titleAr: text("title_ar"),
   description: text("description"),
   descriptionAr: text("description_ar"),
-  timeLimitMin: integer("time_limit_min"), // null = untimed
-  passingScore: integer("passing_score").notNull().default(60), // percent
-  maxAttempts: integer("max_attempts"), // null = unlimited
+  timeLimitMin: int("time_limit_min"), // null = untimed
+  passingScore: int("passing_score").notNull().default(60), // percent
+  maxAttempts: int("max_attempts"), // null = unlimited
   availableFrom: timestamp("available_from"),
   availableUntil: timestamp("available_until"),
   shuffleQuestions: boolean("shuffle_questions").notNull().default(false),
   shuffleAnswers: boolean("shuffle_answers").notNull().default(false),
   showAnswersAfterSubmit: boolean("show_answers_after_submit").notNull().default(true),
   showExplanationsAfterSubmit: boolean("show_explanations_after_submit").notNull().default(true),
-  status: quizStatusEnum("status").notNull().default("draft"),
+  status: mysqlEnum("status", ["draft", "published"]).notNull().default("draft"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
 
-export const quizQuestions = pgTable("quiz_questions", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  quizId: uuid("quiz_id").notNull().references(() => quizzes.id),
-  type: quizQuestionTypeEnum("type").notNull().default("single"),
+export const quizQuestions = mysqlTable("quiz_questions", {
+  id: id36().primaryKey(),
+  quizId: fk36("quiz_id").notNull().references(() => quizzes.id),
+  type: mysqlEnum("type", ["single", "multiple", "true_false"]).notNull().default("single"),
   text: text("text").notNull(),
   textAr: text("text_ar"),
-  imageId: uuid("image_id").references(() => uploads.id),
-  points: integer("points").notNull().default(1),
-  order: integer("order").notNull().default(0),
+  imageId: fk36("image_id").references(() => uploads.id),
+  points: int("points").notNull().default(1),
+  order: int("order").notNull().default(0),
   explanation: text("explanation"),
   explanationAr: text("explanation_ar"),
 });
 
-export const quizChoices = pgTable("quiz_choices", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  questionId: uuid("question_id").notNull().references(() => quizQuestions.id),
+export const quizChoices = mysqlTable("quiz_choices", {
+  id: id36().primaryKey(),
+  questionId: fk36("question_id").notNull().references(() => quizQuestions.id),
   text: text("text").notNull(),
   textAr: text("text_ar"),
   isCorrect: boolean("is_correct").notNull().default(false),
-  order: integer("order").notNull().default(0),
+  order: int("order").notNull().default(0),
 });
 
-export const quizAttempts = pgTable("quiz_attempts", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  quizId: uuid("quiz_id").notNull().references(() => quizzes.id),
-  userId: uuid("user_id").notNull().references(() => users.id),
-  attemptNumber: integer("attempt_number").notNull().default(1),
+export const quizAttempts = mysqlTable("quiz_attempts", {
+  id: id36().primaryKey(),
+  quizId: fk36("quiz_id").notNull().references(() => quizzes.id),
+  userId: fk36("user_id").notNull().references(() => users.id),
+  attemptNumber: int("attempt_number").notNull().default(1),
   startedAt: timestamp("started_at").notNull().defaultNow(),
   submittedAt: timestamp("submitted_at"), // null = in progress
-  score: integer("score"),
-  maxScore: integer("max_score").notNull().default(0),
-  percentage: integer("percentage"),
+  score: int("score"),
+  maxScore: int("max_score").notNull().default(0),
+  percentage: int("percentage"),
   passed: boolean("passed"),
-  timeSpentSec: integer("time_spent_sec"),
+  timeSpentSec: int("time_spent_sec"),
 }, (table) => [
   index("quiz_attempts_quiz_user_idx").on(table.quizId, table.userId),
 ]);
 
-export const quizAnswers = pgTable("quiz_answers", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  attemptId: uuid("attempt_id").notNull().references(() => quizAttempts.id),
-  questionId: uuid("question_id").notNull().references(() => quizQuestions.id),
-  selectedChoiceIds: jsonb("selected_choice_ids").$type<string[]>().default([]),
+export const quizAnswers = mysqlTable("quiz_answers", {
+  id: id36().primaryKey(),
+  attemptId: fk36("attempt_id").notNull().references(() => quizAttempts.id),
+  questionId: fk36("question_id").notNull().references(() => quizQuestions.id),
+  selectedChoiceIds: json("selected_choice_ids").$type<string[]>().default([]),
   isCorrect: boolean("is_correct").notNull().default(false),
-  pointsEarned: integer("points_earned").notNull().default(0),
+  pointsEarned: int("points_earned").notNull().default(0),
 });
 
-export const notifications = pgTable("notifications", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  userId: uuid("user_id").notNull().references(() => users.id),
+export const notifications = mysqlTable("notifications", {
+  id: id36().primaryKey(),
+  userId: fk36("user_id").notNull().references(() => users.id),
   titleKey: text("title_key").notNull(),
   bodyKey: text("body_key").notNull(),
-  meta: jsonb("meta").$type<Record<string, string>>().default({}),
+  meta: json("meta").$type<Record<string, string>>().default({}),
   read: boolean("read").notNull().default(false),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
-export const reviews = pgTable("reviews", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  userId: uuid("user_id").references(() => users.id),
+export const reviews = mysqlTable("reviews", {
+  id: id36().primaryKey(),
+  userId: fk36("user_id").references(() => users.id),
   authorName: text("author_name").notNull(),
   authorRole: text("author_role"),
-  rating: integer("rating").notNull().default(5),
+  rating: int("rating").notNull().default(5),
   body: text("body").notNull(),
   bodyAr: text("body_ar"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
-export const otps = pgTable("otps", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  userId: uuid("user_id").references(() => users.id),
-  email: text("email").notNull(),
-  code: text("code").notNull(),
-  purpose: otpPurposeEnum("purpose").notNull(),
+export const otps = mysqlTable("otps", {
+  id: id36().primaryKey(),
+  userId: fk36("user_id").references(() => users.id),
+  email: varchar("email", { length: 255 }).notNull(),
+  code: varchar("code", { length: 512 }).notNull(),
+  purpose: mysqlEnum("purpose", ["signup", "reset", "join"]).notNull(),
   expiresAt: timestamp("expires_at").notNull(),
   used: boolean("used").notNull().default(false),
   createdAt: timestamp("created_at").notNull().defaultNow(),
