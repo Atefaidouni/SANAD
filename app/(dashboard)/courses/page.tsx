@@ -15,7 +15,7 @@ import { cn } from "@/lib/utils";
 import type { Course, Level } from "@/lib/types";
 
 type LevelFilter = "all" | Level;
-const LEVEL_FILTERS: LevelFilter[] = ["all", "middle", "high", "exam"];
+const LEVEL_FILTERS: LevelFilter[] = ["all", "middle", "high", "exam", "university"];
 
 export default function BrowseCoursesPage() {
   const { t, locale } = useI18n();

@@ -65,7 +65,7 @@ export const courses = mysqlTable("courses", {
   descriptionAr: text("description_ar"),
   subject: text("subject").notNull(),
   subjectAr: text("subject_ar"),
-  level: mysqlEnum("level", ["middle", "high", "exam"]).notNull(),
+  level: mysqlEnum("level", ["middle", "high", "exam", "university"]).notNull(),
   division: text("division"),
   price: int("price").notNull().default(0),
   teacherName: text("teacher_name").notNull(),

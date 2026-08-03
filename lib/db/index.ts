@@ -37,7 +37,7 @@ function getDb(): DB {
         "(no embedded/zero-setup fallback) — see README for local setup."
     );
   }
-  const pool = mysql.createPool(url);
+  const pool = mysql.createPool(typeof url === "string" ? { uri: url, charset: "utf8mb4" } : url);
   const db = drizzleMysql(pool, { schema, mode: "default" });
   globalForDb.__sanadDb = db;
   return db;

@@ -12,7 +12,7 @@ export type EnrollmentStatus = "saved" | "active";
 export type OtpPurpose = "signup" | "reset" | "join";
 export type DeliveryType = "home" | "office" | "pickup";
 export type OrderStatus = "pending" | "confirmed" | "shipped" | "delivered";
-export type Level = "middle" | "high" | "exam";
+export type Level = "middle" | "high" | "exam" | "university";
 export type QuizStatus = "draft" | "published";
 export type QuizQuestionType = "single" | "multiple" | "true_false";
 

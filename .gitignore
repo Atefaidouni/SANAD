@@ -12,6 +12,4 @@ next-env.d.ts
 /.vercel
 *.tsbuildinfo
 SANAD/
-response.json
-. c o d e x - n e x t - d e v . z i p  
- 
+*.tar.gz

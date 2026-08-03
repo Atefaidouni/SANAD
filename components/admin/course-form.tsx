@@ -25,7 +25,7 @@ const schema = z.object({
   title: z.string().min(3),
   titleAr: z.string().optional(),
   subject: z.string().min(1),
-  level: z.enum(["middle", "high", "exam"]),
+  level: z.enum(["middle", "high", "exam", "university"]),
   division: z.string().optional(),
   price: z.coerce.number().min(0),
   teacherName: z.string().min(2),
@@ -166,6 +166,7 @@ export function CourseForm({
               <SelectItem value="middle">{t("levels.middle")}</SelectItem>
               <SelectItem value="high">{t("levels.high")}</SelectItem>
               <SelectItem value="exam">{t("levels.exam")}</SelectItem>
+              <SelectItem value="university">{t("levels.university")}</SelectItem>
             </SelectContent>
           </Select>
         </FormField>
