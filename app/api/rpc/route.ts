@@ -24,5 +24,14 @@ export async function POST(req: Request) {
   // Re-read the user (role/profile may have changed) before building the snapshot.
   const after = await getSessionUser();
   const snapshot = await buildSnapshot(after);
-  return NextResponse.json({ result, session: sessionFor(after), snapshot });
+  return NextResponse.json(
+    { result, session: sessionFor(after), snapshot },
+    {
+      headers: {
+        "Cache-Control": "private, no-cache, no-store, max-age=0, must-revalidate",
+        Pragma: "no-cache",
+        Expires: "0",
+      },
+    }
+  );
 }

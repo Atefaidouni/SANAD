@@ -15,7 +15,7 @@ import { Input } from "@/components/ui/input";
 import { useI18n } from "@/lib/i18n/provider";
 import { useStore } from "@/lib/mock/use-store";
 import { useQueryParams } from "@/lib/hooks";
-import { homePathForRole } from "@/lib/auth-helpers";
+import { getSafeRedirect } from "@/lib/auth-helpers";
 
 const schema = z.object({
   email: z.string().email(),
@@ -41,7 +41,7 @@ export default function LoginPage() {
     if (res.ok) {
       toast.success(t("auth.loginTitle"));
       const next = params.get("next");
-      router.push(next || homePathForRole(res.data!.user.role));
+      router.push(getSafeRedirect(next, res.data!.user.role));
       return;
     }
     setError("root", {

@@ -11,7 +11,8 @@ import { ThemeToggle } from "@/components/shared/theme-toggle";
 import { AmbientBackground } from "@/components/motion";
 import { useI18n } from "@/lib/i18n/provider";
 import { useHydrated, useSession } from "@/lib/mock/use-store";
-import { homePathForRole } from "@/lib/auth-helpers";
+import { getSafeRedirect } from "@/lib/auth-helpers";
+import { useQueryParams } from "@/lib/hooks";
 
 const panelContainer = {
   hidden: {},
@@ -37,12 +38,14 @@ export function AuthShell({
   const router = useRouter();
   const session = useSession();
   const hydrated = useHydrated();
+  const params = useQueryParams();
 
   useEffect(() => {
     if (redirectIfAuthed && hydrated && session) {
-      router.replace(homePathForRole(session.user.role));
+      const next = params.get("next");
+      router.replace(getSafeRedirect(next, session.user.role));
     }
-  }, [redirectIfAuthed, hydrated, session, router]);
+  }, [redirectIfAuthed, hydrated, session, router, params]);
 
   return (
     <div className="relative flex min-h-screen items-center justify-center overflow-hidden p-4 py-10 sm:p-8">

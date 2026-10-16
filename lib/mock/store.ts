@@ -91,7 +91,7 @@ class SanadStore {
   /** Load the current session + role-scoped snapshot from the server. */
   hydrate = async () => {
     try {
-      const r = await fetch("/api/bootstrap", { cache: "no-store" });
+      const r = await fetch(`/api/bootstrap?_t=${Date.now()}`, { cache: "no-store" });
       const json = (await r.json()) as ServerPayload;
       if (!r.ok || !json.snapshot) {
         // The server couldn't be read (e.g. the database is down) — don't let
@@ -174,7 +174,7 @@ class SanadStore {
   }): Promise<Result<{ userId?: string }>> {
     try {
       const json = await this.post("/api/auth/signup", input);
-      if (json.snapshot) this.applyServer(json);
+      if (json.snapshot || "session" in json) this.applyServer(json);
       if (!json.ok) return { ok: false, error: json.error };
       return { ok: true };
     } catch {
@@ -185,7 +185,7 @@ class SanadStore {
   async login(email: string, password: string): Promise<Result<Session>> {
     try {
       const json = await this.post("/api/auth/login", { email, password });
-      if (json.snapshot) this.applyServer(json);
+      if (json.snapshot || "session" in json) this.applyServer(json);
       if (!json.ok) return { ok: false, error: json.error ?? "invalid_credentials" };
       return { ok: true, data: this.session! };
     } catch {

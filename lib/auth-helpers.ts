@@ -7,6 +7,29 @@ export function homePathForRole(role: Role): string {
   return "/dashboard";
 }
 
+/**
+ * Safely resolves a destination redirect URL according to user role permissions.
+ * Prevents open redirects (ensures relative paths starting with a single '/')
+ * and prevents role privilege mismatch (e.g. non-admins trying to access /admin,
+ * non-teachers trying to access /teacher).
+ */
+export function getSafeRedirect(next: string | null | undefined, role: Role): string {
+  if (!next || typeof next !== "string") {
+    return homePathForRole(role);
+  }
+  const trimmed = next.trim();
+  if (!trimmed.startsWith("/") || trimmed.startsWith("//") || trimmed.includes("\\")) {
+    return homePathForRole(role);
+  }
+  if (trimmed.startsWith("/admin") && role !== "admin") {
+    return homePathForRole(role);
+  }
+  if (trimmed.startsWith("/teacher") && role !== "teacher") {
+    return homePathForRole(role);
+  }
+  return trimmed;
+}
+
 /** Shared password-strength scoring used by signup + reset. */
 export interface PasswordScore {
   score: 0 | 1 | 2 | 3 | 4;
